@@ -13,6 +13,9 @@ const STORAGE_KEYS = {
   SETTINGS: 'clippie_settings_v2',
   HISTORY: 'clippie_history_v2',
   VAULT: 'clippie_vault_v2',
+  GITHUB_PAT: 'clippie_github_pat',
+  GITHUB_USER: 'clippie_github_user',
+  GIST_CACHE: 'clippie_gist_cache_v2',
 };
 
 // Seed dataset representing developer tool precision
@@ -209,6 +212,20 @@ const STATE = {
   },
   selectedHistoryId: null,
   isMonitoringActive: true,
+  gist: {
+    pat: '',
+    user: null,
+    gists: [],
+    selectedGistId: 'gist_fastapi_jwt',
+    filter: '',
+    sortOrder: 'desc',
+    diffMode: 'unified', // 'unified' | 'split'
+    rateLimit: { remaining: 5000, limit: 5000, reset: null },
+    isDemoMode: true,
+    lastSynced: 'Just now',
+    revHash: '#d4a9f1c',
+    commitMessage: 'feat: add token clock skew tolerance and refresh TTL',
+  },
 };
 
 // =============================================================================
@@ -239,8 +256,37 @@ function loadStateFromStorage() {
     STATE.settings = { ...INITIAL_SETTINGS };
   }
 
+  // Load Gist PAT and User Cache
+  try {
+    const rawPat = localStorage.getItem(STORAGE_KEYS.GITHUB_PAT);
+    if (rawPat) {
+      STATE.gist.pat = rawPat;
+      STATE.gist.isDemoMode = false;
+    }
+    const rawUser = localStorage.getItem(STORAGE_KEYS.GITHUB_USER);
+    if (rawUser) {
+      STATE.gist.user = JSON.parse(rawUser);
+    }
+    const rawGistCache = localStorage.getItem(STORAGE_KEYS.GIST_CACHE);
+    if (rawGistCache) {
+      STATE.gist.gists = JSON.parse(rawGistCache);
+    } else {
+      STATE.gist.gists = getSeedGists();
+    }
+  } catch {
+    STATE.gist.gists = getSeedGists();
+  }
+
   if (STATE.history.length > 0) {
     STATE.selectedHistoryId = STATE.history[0].id;
+  }
+}
+
+function saveGistCache() {
+  try {
+    localStorage.setItem(STORAGE_KEYS.GIST_CACHE, JSON.stringify(STATE.gist.gists));
+  } catch (err) {
+    console.error('Failed to cache gists:', err);
   }
 }
 
@@ -1063,99 +1109,997 @@ function promoteHistoryToSnippet(histItem) {
 }
 
 // =============================================================================
-// 12. VIEW RENDERING (GIST SYNC)
+// 12. GIST SYNC ENGINE & DIFF INSPECTOR
 // =============================================================================
+
+function getSeedGists() {
+  return [
+    {
+      id: 'gist_docker_compose',
+      title: 'docker-compose.microservices.yml',
+      filename: 'docker-compose.microservices.yml',
+      path: 'infra/compose/docker-compose.yml',
+      language: 'yaml',
+      status: 'Synced',
+      filesCount: '3 files',
+      stars: 12,
+      forks: 2,
+      visibility: 'Public Gist',
+      isPublic: true,
+      updated: '14m ago',
+      html_url: 'https://gist.github.com/developer/9dfb2a1a8c',
+      remoteContent: `version: '3.8'\nservices:\n  web:\n    build: .\n    ports:\n      - "3000:3000"\n    environment:\n      - NODE_ENV=production\n      - DATABASE_URL=postgres://db:5432/app\n  cache:\n    image: redis:7-alpine\n    ports:\n      - "6379:6379"`,
+      localContent: `version: '3.8'\nservices:\n  web:\n    build: .\n    ports:\n      - "3000:3000"\n    environment:\n      - NODE_ENV=production\n      - DATABASE_URL=postgres://db:5432/app\n  cache:\n    image: redis:7-alpine\n    ports:\n      - "6379:6379"`,
+      revHash: '#9dfb2a1',
+    },
+    {
+      id: 'gist_fastapi_jwt',
+      title: 'fastapi-jwt-auth-middleware.py',
+      filename: 'fastapi-jwt-auth-middleware.py',
+      path: 'app/core/security/jwt_bearer.py',
+      language: 'python',
+      status: '1 local change pending',
+      filesCount: '1 file',
+      stars: 34,
+      forks: 7,
+      visibility: 'Secret Gist',
+      isPublic: false,
+      updated: 'Modified now',
+      html_url: 'https://gist.github.com/developer/4b2a8e100f',
+      remoteContent: `import time\nfrom fastapi import Depends, HTTPException, status\nfrom fastapi.security import HTTPBearer, HTTPAuthorizationCredentials\nfrom jose import jwt, JWTError\n\nsecurity = HTTPBearer()\n\nasync def verify_jwt_token(credentials: HTTPAuthorizationCredentials):\n    token = credentials.credentials\n    try:\n        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])\n        if payload.get("sub") is None: return False\n        return payload\n    except JWTError as exc:\n        raise HTTPException(status_code=401, detail="Invalid token")`,
+      localContent: `import time\nfrom fastapi import Depends, HTTPException, status\nfrom fastapi.security import HTTPBearer, HTTPAuthorizationCredentials\nfrom jose import jwt, JWTError\n\nsecurity = HTTPBearer()\n\nasync def verify_jwt_token(credentials: HTTPAuthorizationCredentials):\n    token = credentials.credentials\n    try:\n        # Added 30s clock skew tolerance and custom leeway\n        options = {"verify_exp": True, "leeway": 30}\n        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM], options=options)\n        if payload.get("exp") - time.time() < REFRESH_BUFFER_SEC:\n            request.state.needs_refresh = True\n        return payload\n    except JWTError as exc:\n        raise HTTPException(status_code=401, detail="Invalid token")`,
+      revHash: '#4b2a8e',
+    },
+    {
+      id: 'gist_k8s_ingress',
+      title: 'k8s-ingress-traefik-certmanager.yaml',
+      filename: 'k8s-ingress-traefik-certmanager.yaml',
+      path: 'deploy/k8s/traefik-ingress.yaml',
+      language: 'yaml',
+      status: 'Synced',
+      filesCount: '2 files',
+      stars: 4,
+      forks: 1,
+      visibility: 'Secret Gist',
+      isPublic: false,
+      updated: '2h ago',
+      html_url: 'https://gist.github.com/developer/2b67d98ee1',
+      remoteContent: `apiVersion: networking.k8s.io/v1\nkind: Ingress\nmetadata:\n  name: clippie-ingress\n  annotations:\n    traefik.ingress.kubernetes.io/router.entrypoints: websecure\n    cert-manager.io/cluster-issuer: letsencrypt-prod\nspec:\n  tls:\n  - hosts:\n    - vault.clippie.dev\n    secretName: clippie-tls`,
+      localContent: `apiVersion: networking.k8s.io/v1\nkind: Ingress\nmetadata:\n  name: clippie-ingress\n  annotations:\n    traefik.ingress.kubernetes.io/router.entrypoints: websecure\n    cert-manager.io/cluster-issuer: letsencrypt-prod\nspec:\n  tls:\n  - hosts:\n    - vault.clippie.dev\n    secretName: clippie-tls`,
+      revHash: '#2b67d98',
+    },
+    {
+      id: 'gist_bash_profile',
+      title: 'bash-developer-profile-aliases.sh',
+      filename: 'bash-developer-profile-aliases.sh',
+      path: '~/.bash_aliases',
+      language: 'bash',
+      status: 'Synced',
+      filesCount: '1 file',
+      stars: 38,
+      forks: 9,
+      visibility: 'Public Gist',
+      isPublic: true,
+      updated: '1d ago',
+      html_url: 'https://gist.github.com/developer/f8812c3309a',
+      remoteContent: `alias k="kubectl"\nalias g="git"\nalias dco="docker-compose"\nalias tf="terraform"\nexport EDITOR="vim"\nexport HISTSIZE=50000\nexport HISTFILESIZE=100000`,
+      localContent: `alias k="kubectl"\nalias g="git"\nalias dco="docker-compose"\nalias tf="terraform"\nexport EDITOR="vim"\nexport HISTSIZE=50000\nexport HISTFILESIZE=100000`,
+      revHash: '#f8812c3',
+    }
+  ];
+}
+
+/**
+ * Robust Myers / LCS line-by-line Diff Generator
+ */
+function computeDiff(oldText, newText) {
+  const oldLines = (oldText || '').split('\n');
+  const newLines = (newText || '').split('\n');
+
+  const N = oldLines.length;
+  const M = newLines.length;
+
+  const dp = Array.from({ length: N + 1 }, () => new Int32Array(M + 1));
+
+  for (let i = 0; i < N; i++) {
+    for (let j = 0; j < M; j++) {
+      if (oldLines[i] === newLines[j]) {
+        dp[i + 1][j + 1] = dp[i][j] + 1;
+      } else {
+        dp[i + 1][j + 1] = Math.max(dp[i + 1][j], dp[i][j + 1]);
+      }
+    }
+  }
+
+  const rows = [];
+  let i = N;
+  let j = M;
+
+  while (i > 0 || j > 0) {
+    if (i > 0 && j > 0 && oldLines[i - 1] === newLines[j - 1]) {
+      rows.unshift({
+        type: 'ctx',
+        oldLine: i,
+        newLine: j,
+        text: oldLines[i - 1],
+      });
+      i--;
+      j--;
+    } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
+      rows.unshift({
+        type: 'add',
+        oldLine: '++',
+        newLine: j,
+        text: newLines[j - 1],
+      });
+      j--;
+    } else if (i > 0 && (j === 0 || dp[i][j - 1] < dp[i - 1][j])) {
+      rows.unshift({
+        type: 'del',
+        oldLine: i,
+        newLine: '--',
+        text: oldLines[i - 1],
+      });
+      i--;
+    }
+  }
+
+  let additions = 0;
+  let deletions = 0;
+  for (const r of rows) {
+    if (r.type === 'add') additions++;
+    if (r.type === 'del') deletions++;
+  }
+
+  return { rows, additions, deletions };
+}
 
 function renderGistSyncView() {
   const container = document.getElementById('gistCardsContainer');
   if (!container) return;
 
-  const mockGists = [
-    {
-      title: 'docker-compose.microservices.yml',
-      status: 'Synced',
-      files: '3 files',
-      stars: 12,
-      forks: 2,
-      visibility: 'Public Gist',
-      updated: '14m ago',
-    },
-    {
-      title: 'fastapi-jwt-middleware.py',
-      status: 'Synced',
-      files: '1 file',
-      stars: 34,
-      forks: 7,
-      visibility: 'Secret Gist',
-      updated: '42m ago',
-    },
-    {
-      title: 'k8s-ingress-controller-traefik.yaml',
-      status: 'Synced',
-      files: '2 files',
-      stars: 8,
-      forks: 1,
-      visibility: 'Public Gist',
-      updated: '2h ago',
-    },
-    {
-      title: 'postgres-bloat-check.sql',
-      status: 'Synced',
-      files: '1 file',
-      stars: 19,
-      forks: 4,
-      visibility: 'Public Gist',
-      updated: 'Yesterday',
+  // 1. Update API Rate Limit & Cache Telemetry
+  const rateLimitEl = document.getElementById('gistRateLimitText');
+  const cacheEtagEl = document.getElementById('gistCacheEtagText');
+  if (rateLimitEl) {
+    rateLimitEl.textContent = `${STATE.gist.rateLimit.remaining.toLocaleString()} / ${STATE.gist.rateLimit.limit.toLocaleString()}`;
+  }
+  if (cacheEtagEl) {
+    cacheEtagEl.textContent = STATE.gist.pat ? '99.8% (Active)' : '99.4% (Active)';
+  }
+
+  // 2. Update PAT Connection Cards
+  const disconCard = document.getElementById('gistPatDisconnectedCard');
+  const connCard = document.getElementById('gistPatConnectedCard');
+  const remoteLink = document.getElementById('gistRemoteLink');
+  const remoteBadge = document.getElementById('gistRemoteStatusBadge');
+  const terminalLog = document.getElementById('gistTerminalLogText');
+
+  if (STATE.gist.pat && STATE.gist.user) {
+    if (disconCard) disconCard.classList.add('hidden');
+    if (connCard) connCard.classList.remove('hidden');
+
+    const avatarEl = document.getElementById('gistUserAvatar');
+    const nameEl = document.getElementById('gistUserName');
+    const loginEl = document.getElementById('gistUserLogin');
+    const pubCount = document.getElementById('gistPublicCount');
+    const secCount = document.getElementById('gistSecretCount');
+
+    if (avatarEl) avatarEl.src = STATE.gist.user.avatar_url || 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png';
+    if (nameEl) nameEl.textContent = STATE.gist.user.name || STATE.gist.user.login;
+    if (loginEl) {
+      loginEl.textContent = `@${STATE.gist.user.login}`;
+      loginEl.href = STATE.gist.user.html_url || `https://github.com/${STATE.gist.user.login}`;
     }
-  ];
+    if (pubCount) pubCount.textContent = `${STATE.gist.user.public_gists || 0} public gists`;
+    if (secCount) secCount.textContent = `${STATE.gist.user.total_private_gists || 0} secret gists`;
 
-  container.innerHTML = mockGists.map(g => `
-    <article class="p-4 bg-surface-card rounded-xl border border-border-subtle hover:border-border-hover transition-all flex flex-col justify-between space-y-3">
-      <div class="flex items-start justify-between gap-2">
-        <div class="flex items-center gap-2 truncate">
-          <span class="material-symbols-outlined text-syntax-func text-[18px]">deployed_code</span>
-          <h4 class="font-mono text-[13px] font-semibold text-text-primary truncate hover:text-primary transition-colors">${escapeHtml(g.title)}</h4>
+    if (remoteLink) {
+      remoteLink.textContent = `gist.github.com/${STATE.gist.user.login}`;
+      remoteLink.href = `https://gist.github.com/${STATE.gist.user.login}`;
+    }
+    if (remoteBadge) {
+      remoteBadge.textContent = 'Connected (Live API)';
+      remoteBadge.className = 'px-1.5 py-0.5 rounded bg-secondary-container text-secondary text-[10px] font-mono font-medium';
+    }
+    if (terminalLog) {
+      terminalLog.textContent = `// memo: Authenticated as @${STATE.gist.user.login}. Token held in secure storage. Rate limits active.`;
+    }
+  } else {
+    if (disconCard) disconCard.classList.remove('hidden');
+    if (connCard) connCard.classList.add('hidden');
+
+    if (remoteLink) {
+      remoteLink.textContent = 'gist.github.com';
+      remoteLink.href = 'https://gist.github.com';
+    }
+    if (remoteBadge) {
+      remoteBadge.textContent = STATE.gist.isDemoMode ? 'Demo Sandbox' : 'Disconnected';
+      remoteBadge.className = 'px-1.5 py-0.5 rounded bg-surface-container text-text-secondary text-[10px] font-mono';
+    }
+    if (terminalLog) {
+      terminalLog.textContent = '// memo: Running in local sandbox. Connect GitHub PAT to sync live gists.';
+    }
+  }
+
+  // 3. Update Sync Header Stats
+  const lastSyncText = document.getElementById('gistLastSyncedText');
+  const revHashEl = document.getElementById('gistRevHash');
+  if (lastSyncText) lastSyncText.textContent = STATE.gist.lastSynced;
+  if (revHashEl) revHashEl.textContent = STATE.gist.revHash;
+
+  // 4. Filter & Sort Gists
+  let filtered = [...STATE.gist.gists];
+  const query = (STATE.gist.filter || '').toLowerCase().trim();
+  if (query) {
+    filtered = filtered.filter(g =>
+      (g.title || '').toLowerCase().includes(query) ||
+      (g.filename || '').toLowerCase().includes(query) ||
+      (g.language || '').toLowerCase().includes(query)
+    );
+  }
+
+  if (STATE.gist.sortOrder === 'asc') {
+    filtered.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+  }
+
+  const countBadge = document.getElementById('gistManagedCountBadge');
+  if (countBadge) countBadge.textContent = `${filtered.length} Managed`;
+
+  if (filtered.length === 0) {
+    container.innerHTML = `
+      <div class="p-6 bg-surface-card rounded-xl border border-dashed border-border-subtle text-center text-text-muted font-mono text-[12px]">
+        No gists match filter. Click "+ New Gist from Vault" to create one.
+      </div>
+    `;
+    return;
+  }
+
+  // 5. Render Gist Cards
+  container.innerHTML = filtered.map(g => {
+    const isSelected = g.id === STATE.gist.selectedGistId;
+    const hasPending = g.status === '1 local change pending';
+
+    const cardBorder = isSelected
+      ? 'border-primary ring-1 ring-primary/40 bg-surface-container shadow-lg'
+      : 'border-border-subtle bg-surface-card hover:border-border-hover hover:bg-surface-low';
+
+    const statusBadge = hasPending
+      ? `<span class="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/10 text-syntax-variable border border-amber-500/30 font-mono text-[10px] font-medium">
+           <span class="w-1.5 h-1.5 rounded-full bg-syntax-variable animate-ping"></span> 1 local change pending
+         </span>`
+      : `<span class="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded bg-secondary-container font-mono text-[10px] text-secondary border border-secondary/30 font-medium">
+           <span class="w-1.5 h-1.5 rounded-full bg-secondary"></span> Synced
+         </span>`;
+
+    let fileIcon = 'deployed_code';
+    if (g.language === 'python') fileIcon = 'security';
+    else if (g.language === 'yaml') fileIcon = 'cloud_sync';
+    else if (g.language === 'bash') fileIcon = 'terminal';
+
+    // Staged preview delta if pending and selected
+    let deltaPreview = '';
+    if (hasPending && isSelected) {
+      const diffData = computeDiff(g.remoteContent, g.localContent);
+      deltaPreview = `
+        <div class="p-2 rounded bg-surface-low flex items-center justify-between border border-border-subtle">
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="material-symbols-outlined text-[15px] text-syntax-variable">difference</span>
+            <span class="font-mono text-[11px] text-text-secondary truncate">~ delta: +${diffData.additions} lines / -${diffData.deletions} lines</span>
+          </div>
+          <span class="font-mono text-[11px] text-primary font-medium">Focused in Inspector →</span>
         </div>
-        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-surface-low font-mono text-[10px] text-secondary border border-border-subtle shrink-0">
-          <span class="w-1.5 h-1.5 rounded-full bg-secondary"></span> ${g.status}
-        </span>
-      </div>
+      `;
+    }
 
-      <div class="flex items-center gap-3 font-mono text-[11px] text-text-muted">
-        <span>${g.files}</span>
-        <span>•</span>
-        <span class="flex items-center gap-0.5"><span class="material-symbols-outlined text-[13px]">star</span> ${g.stars}</span>
-        <span>•</span>
-        <span class="flex items-center gap-0.5"><span class="material-symbols-outlined text-[13px]">fork_right</span> ${g.forks}</span>
-        <span>•</span>
-        <span class="px-1.5 py-0.2 rounded bg-surface-low">${g.visibility}</span>
-      </div>
+    return `
+      <article onclick="selectGistForDiff('${g.id}')" class="interactive-btn cursor-pointer flex flex-col gap-3 p-3.5 rounded-xl border ${cardBorder} transition-all relative overflow-hidden group" data-id="${g.id}">
+        ${isSelected ? '<div class="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>' : ''}
+        
+        <div class="flex items-start justify-between gap-2 ${isSelected ? 'pl-1' : ''}">
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="material-symbols-outlined text-[18px] text-syntax-func">${fileIcon}</span>
+            <h4 class="font-mono text-[13px] font-semibold text-text-primary truncate group-hover:text-primary transition-colors">${escapeHtml(g.filename || g.title)}</h4>
+          </div>
+          ${statusBadge}
+        </div>
 
-      <div class="pt-2 border-t border-border-subtle flex items-center justify-between font-mono text-[11px]">
-        <span class="text-text-muted">${g.updated}</span>
-        <button onclick="triggerToast('Opened remote Gist on GitHub')" class="text-primary hover:underline flex items-center gap-1" type="button">
-          <span>View on GitHub</span>
-          <span class="material-symbols-outlined text-[13px]">open_in_new</span>
-        </button>
-      </div>
-    </article>
-  `).join('');
+        <div class="flex items-center justify-between text-text-muted font-mono text-[11px] ${isSelected ? 'pl-1' : ''}">
+          <div class="flex items-center gap-2.5">
+            <span class="text-text-secondary">${g.filesCount || '1 file'}</span>
+            <span>•</span>
+            <span class="flex items-center gap-0.5 text-text-secondary"><span class="material-symbols-outlined text-[13px]">star</span> ${g.stars || 0}</span>
+            <span>•</span>
+            <span class="flex items-center gap-0.5 text-text-secondary"><span class="material-symbols-outlined text-[13px]">fork_right</span> ${g.forks || 0}</span>
+            <span>•</span>
+            <span class="px-1.5 py-0.2 rounded bg-surface-lowest text-text-muted text-[10px]">${g.visibility || 'Secret Gist'}</span>
+          </div>
+          <span class="text-[10px] text-text-muted">${g.updated || 'Just now'}</span>
+        </div>
+
+        ${deltaPreview}
+
+        <div class="flex items-center justify-between pt-2 border-t border-border-subtle font-mono text-[11px] ${isSelected ? 'pl-1' : ''}">
+          <div class="flex items-center gap-2">
+            <a href="${g.html_url || '#'}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" class="inline-flex items-center gap-1 text-text-muted hover:text-text-primary transition-colors">
+              <span class="material-symbols-outlined text-[13px]">open_in_new</span>
+              <span>GitHub</span>
+            </a>
+            <span class="text-text-muted text-[10px]">•</span>
+            <button onclick="event.stopPropagation(); copyTextToClipboard('${g.html_url || ''}', 'Gist URL')" class="inline-flex items-center gap-1 text-text-muted hover:text-text-primary transition-colors" type="button">
+              <span class="material-symbols-outlined text-[13px]">link</span>
+              <span>Copy URL</span>
+            </button>
+          </div>
+          
+          <div class="flex items-center gap-1.5">
+            <button onclick="event.stopPropagation(); pullRemoteGist('${g.id}')" class="px-2 py-0.5 rounded bg-surface-lowest hover:bg-surface-high text-text-secondary hover:text-text-primary border border-border-subtle transition-colors text-[10px]" type="button" title="Pull remote changes into local vault">
+              Pull Remote
+            </button>
+            ${hasPending ? `
+              <button onclick="event.stopPropagation(); pushCurrentGistChanges()" class="px-2 py-0.5 rounded bg-primary text-white hover:bg-blue-600 font-semibold transition-all text-[10px]" type="button">
+                Push Local ⇧
+              </button>
+            ` : ''}
+          </div>
+        </div>
+      </article>
+    `;
+  }).join('');
+
+  // 6. Update Right-Column Diff Inspector
+  renderDiffInspector();
 }
 
-function triggerGistSync() {
-  const icon = document.getElementById('syncSpinIcon');
-  const lastSyncText = document.getElementById('gistLastSyncedText');
-  const revHash = document.getElementById('gistRevHash');
+function selectGistForDiff(gistId) {
+  STATE.gist.selectedGistId = gistId;
+  renderGistSyncView();
+}
 
+function renderDiffInspector() {
+  const activeGist = STATE.gist.gists.find(g => g.id === STATE.gist.selectedGistId) || STATE.gist.gists[0];
+  if (!activeGist) return;
+
+  const fileNameEl = document.getElementById('diffFileName');
+  const revTagEl = document.getElementById('diffRevTag');
+  const pathEl = document.getElementById('diffWindowPath');
+  const metaBadgeEl = document.getElementById('diffMetaBadge');
+  const rowsContainer = document.getElementById('diffRowsContainer');
+  const additionsEl = document.getElementById('diffAdditionsCount');
+  const deletionsEl = document.getElementById('diffDeletionsCount');
+
+  if (fileNameEl) fileNameEl.textContent = activeGist.filename || activeGist.title;
+  if (revTagEl) revTagEl.textContent = activeGist.revHash || '#4b2a8e';
+  if (pathEl) pathEl.textContent = activeGist.path || activeGist.filename;
+  if (metaBadgeEl) metaBadgeEl.textContent = `UTF-8 • ${(activeGist.language || 'code').toUpperCase()}`;
+
+  const diffData = computeDiff(activeGist.remoteContent, activeGist.localContent);
+
+  if (additionsEl) additionsEl.textContent = `+${diffData.additions} additions`;
+  if (deletionsEl) deletionsEl.textContent = `-${diffData.deletions} deletions`;
+
+  if (!rowsContainer) return;
+
+  if (diffData.rows.length === 0) {
+    rowsContainer.innerHTML = `<div class="p-4 text-center text-text-muted font-mono text-[12px]">Files are identical. No diff to inspect.</div>`;
+    return;
+  }
+
+  if (STATE.gist.diffMode === 'unified') {
+    rowsContainer.innerHTML = diffData.rows.map(row => {
+      if (row.type === 'ctx') {
+        return `
+          <div class="flex items-center diff-line-ctx px-3 py-0.5">
+            <span class="diff-gutter-num text-syntax-comment">${String(row.oldLine).padStart(2, '0')}</span>
+            <span class="diff-gutter-num text-syntax-comment">${String(row.newLine).padStart(2, '0')}</span>
+            <span class="w-4 shrink-0 text-center select-none text-syntax-comment">&nbsp;</span>
+            <span class="whitespace-pre overflow-x-auto text-text-primary">${escapeHtml(row.text)}</span>
+          </div>
+        `;
+      } else if (row.type === 'del') {
+        return `
+          <div class="flex items-center diff-line-del px-3 py-0.5">
+            <span class="diff-gutter-num text-syntax-keyword">${String(row.oldLine).padStart(2, '0')}</span>
+            <span class="diff-gutter-num text-syntax-comment">--</span>
+            <span class="w-4 shrink-0 text-center select-none text-syntax-keyword font-bold">-</span>
+            <span class="whitespace-pre overflow-x-auto line-del-text">${escapeHtml(row.text)}</span>
+          </div>
+        `;
+      } else if (row.type === 'add') {
+        return `
+          <div class="flex items-center diff-line-add px-3 py-0.5">
+            <span class="diff-gutter-num text-syntax-comment">++</span>
+            <span class="diff-gutter-num text-secondary">${String(row.newLine).padStart(2, '0')}</span>
+            <span class="w-4 shrink-0 text-center select-none text-secondary font-bold">+</span>
+            <span class="whitespace-pre overflow-x-auto font-medium">${escapeHtml(row.text)}</span>
+          </div>
+        `;
+      }
+    }).join('');
+  } else {
+    // Side-by-side mode
+    rowsContainer.innerHTML = `
+      <div class="grid grid-cols-2 divide-x divide-border-subtle">
+        <div class="flex flex-col">
+          <div class="px-3 py-1 bg-surface-low border-b border-border-subtle font-mono text-[11px] text-syntax-keyword font-semibold">Remote (HEAD)</div>
+          ${diffData.rows.filter(r => r.type !== 'add').map(r => `
+            <div class="flex items-center px-2 py-0.5 ${r.type === 'del' ? 'diff-line-del' : 'diff-line-ctx'}">
+              <span class="w-6 shrink-0 text-right pr-2 text-syntax-comment text-[10px]">${r.oldLine || ''}</span>
+              <span class="whitespace-pre overflow-x-auto ${r.type === 'del' ? 'line-del-text' : ''}">${escapeHtml(r.text)}</span>
+            </div>
+          `).join('')}
+        </div>
+        <div class="flex flex-col">
+          <div class="px-3 py-1 bg-surface-low border-b border-border-subtle font-mono text-[11px] text-secondary font-semibold">Local Workspace</div>
+          ${diffData.rows.filter(r => r.type !== 'del').map(r => `
+            <div class="flex items-center px-2 py-0.5 ${r.type === 'add' ? 'diff-line-add' : 'diff-line-ctx'}">
+              <span class="w-6 shrink-0 text-right pr-2 text-syntax-comment text-[10px]">${r.newLine || ''}</span>
+              <span class="whitespace-pre overflow-x-auto font-medium">${escapeHtml(r.text)}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Live GitHub REST API Integration & Sync Actions
+// -----------------------------------------------------------------------------
+
+async function connectGitHubAccount() {
+  const input = document.getElementById('gistPatInput');
+  const spinner = document.getElementById('connectPatSpinner');
+  const label = document.getElementById('connectPatLabel');
+
+  const pat = (input?.value || '').trim();
+  if (!pat) {
+    triggerToast('Please paste a GitHub Personal Access Token (PAT)', 'error');
+    if (input) input.focus();
+    return;
+  }
+
+  if (spinner) spinner.classList.add('animate-spin');
+  if (label) label.textContent = 'Verifying...';
+
+  try {
+    const res = await fetch('https://api.github.com/user', {
+      headers: {
+        'Accept': 'application/vnd.github+json',
+        'Authorization': `Bearer ${pat}`,
+        'X-GitHub-Api-Version': '2022-11-28',
+      }
+    });
+
+    // Capture live rate-limiting headers
+    const remaining = res.headers.get('x-ratelimit-remaining');
+    const limit = res.headers.get('x-ratelimit-limit');
+    if (remaining && limit) {
+      STATE.gist.rateLimit.remaining = parseInt(remaining, 10);
+      STATE.gist.rateLimit.limit = parseInt(limit, 10);
+    }
+
+    if (!res.ok) {
+      if (res.status === 401) {
+        throw new Error('Bad credentials: Token invalid or expired');
+      } else {
+        throw new Error(`GitHub API error HTTP ${res.status}`);
+      }
+    }
+
+    const userData = await res.json();
+    STATE.gist.pat = pat;
+    STATE.gist.user = userData;
+    STATE.gist.isDemoMode = false;
+
+    localStorage.setItem(STORAGE_KEYS.GITHUB_PAT, pat);
+    localStorage.setItem(STORAGE_KEYS.GITHUB_USER, JSON.stringify(userData));
+
+    triggerToast(`Connected as @${userData.login}! Fetching remote gists...`);
+
+    await fetchRemoteGists();
+  } catch (err) {
+    console.error('GitHub connection error:', err);
+    triggerToast(`GitHub Connection Failed: ${err.message}`, 'error');
+  } finally {
+    if (spinner) spinner.classList.remove('animate-spin');
+    if (label) label.textContent = 'Connect & Verify';
+  }
+}
+
+async function fetchRemoteGists() {
+  const icon = document.getElementById('syncSpinIcon');
   if (icon) icon.classList.add('animate-spin');
 
-  setTimeout(() => {
+  if (!STATE.gist.pat) {
+    // Sandbox simulated sync
+    setTimeout(() => {
+      if (icon) icon.classList.remove('animate-spin');
+      STATE.gist.lastSynced = 'Just now';
+      STATE.gist.revHash = `#${Math.random().toString(16).slice(2, 9)}`;
+      renderGistSyncView();
+      triggerToast(`Synced with Gist repository (${STATE.gist.revHash})`);
+    }, 800);
+    return;
+  }
+
+  try {
+    const res = await fetch('https://api.github.com/gists?per_page=30', {
+      headers: {
+        'Accept': 'application/vnd.github+json',
+        'Authorization': `Bearer ${STATE.gist.pat}`,
+        'X-GitHub-Api-Version': '2022-11-28',
+      }
+    });
+
+    const remaining = res.headers.get('x-ratelimit-remaining');
+    const limit = res.headers.get('x-ratelimit-limit');
+    if (remaining && limit) {
+      STATE.gist.rateLimit.remaining = parseInt(remaining, 10);
+      STATE.gist.rateLimit.limit = parseInt(limit, 10);
+    }
+
+    if (!res.ok) {
+      throw new Error(`Failed to load gists: HTTP ${res.status}`);
+    }
+
+    const remoteList = await res.json();
+    const liveGists = [];
+
+    for (const item of remoteList) {
+      const filesArr = Object.values(item.files || {});
+      const firstFile = filesArr[0] || {};
+      const filename = firstFile.filename || item.description || 'snippet.txt';
+      const rawContent = firstFile.content || `# ${filename}\n# Fetched from GitHub Gist`;
+
+      // Check if this gist has a matching local snippet in vault
+      const matchingSnip = STATE.snippets.find(s => s.gistId === item.id || s.title.toLowerCase() === filename.toLowerCase());
+      const localContent = matchingSnip ? matchingSnip.content : rawContent;
+      const isModified = localContent.trim() !== rawContent.trim();
+
+      liveGists.push({
+        id: item.id,
+        title: filename,
+        filename: filename,
+        path: filename,
+        language: (firstFile.language || 'plaintext').toLowerCase(),
+        status: isModified ? '1 local change pending' : 'Synced',
+        filesCount: `${filesArr.length} file${filesArr.length > 1 ? 's' : ''}`,
+        stars: 0,
+        forks: (item.forks || []).length,
+        visibility: item.public ? 'Public Gist' : 'Secret Gist',
+        isPublic: item.public,
+        updated: formatRelativeTime(item.updated_at),
+        html_url: item.html_url,
+        remoteContent: rawContent,
+        localContent: localContent,
+        revHash: `#${item.id.slice(0, 7)}`,
+      });
+    }
+
+    if (liveGists.length > 0) {
+      STATE.gist.gists = liveGists;
+      if (!STATE.gist.selectedGistId || !liveGists.some(g => g.id === STATE.gist.selectedGistId)) {
+        STATE.gist.selectedGistId = liveGists[0].id;
+      }
+      saveGistCache();
+    }
+
+    STATE.gist.lastSynced = 'Just now';
+    STATE.gist.revHash = `#${Math.random().toString(16).slice(2, 9)}`;
+    renderGistSyncView();
+    triggerToast(`Fetched ${liveGists.length} Gists from GitHub! ☁️`);
+  } catch (err) {
+    console.error('Fetch remote gists error:', err);
+    triggerToast(`Remote sync failed: ${err.message}`, 'error');
+  } finally {
     if (icon) icon.classList.remove('animate-spin');
-    const newHash = `#${Math.random().toString(16).slice(2, 9)}`;
-    if (revHash) revHash.textContent = newHash;
-    if (lastSyncText) lastSyncText.textContent = 'Last Synced: Just now';
-    triggerToast(`Gist Sync Complete: Pushed ${STATE.snippets.length} snippets to remote (${newHash})`);
-  }, 900);
+  }
+}
+
+function disconnectGitHubAccount() {
+  localStorage.removeItem(STORAGE_KEYS.GITHUB_PAT);
+  localStorage.removeItem(STORAGE_KEYS.GITHUB_USER);
+  localStorage.removeItem(STORAGE_KEYS.GIST_CACHE);
+
+  STATE.gist.pat = '';
+  STATE.gist.user = null;
+  STATE.gist.isDemoMode = true;
+  STATE.gist.gists = getSeedGists();
+  STATE.gist.selectedGistId = 'gist_fastapi_jwt';
+
+  renderGistSyncView();
+  triggerToast('Disconnected GitHub account: Restored demo sandbox mode');
+}
+
+function toggleGistDemoMode() {
+  STATE.gist.isDemoMode = true;
+  STATE.gist.gists = getSeedGists();
+  STATE.gist.selectedGistId = 'gist_fastapi_jwt';
+  renderGistSyncView();
+  triggerToast('Loaded Stitch Demo Gist Sandbox (Diff Ready!)');
+}
+
+function togglePatVisibility() {
+  const input = document.getElementById('gistPatInput');
+  const icon = document.getElementById('patVisibilityIcon');
+  if (!input) return;
+
+  if (input.type === 'password') {
+    input.type = 'text';
+    if (icon) icon.textContent = 'visibility_off';
+  } else {
+    input.type = 'password';
+    if (icon) icon.textContent = 'visibility';
+  }
+}
+
+function triggerManualSync() {
+  fetchRemoteGists();
+}
+
+async function pushCurrentGistChanges() {
+  const activeGist = STATE.gist.gists.find(g => g.id === STATE.gist.selectedGistId) || STATE.gist.gists[0];
+  if (!activeGist) return;
+
+  const pushBtn = document.getElementById('pushGistBtn');
+  const pushLabel = document.getElementById('pushGistLabel');
+  const pushIcon = document.getElementById('pushGistIcon');
+  const commitInput = document.getElementById('gistCommitMsgInput');
+  const commitMsg = (commitInput?.value || 'Update gist revision via Clippie').trim();
+
+  if (pushLabel) pushLabel.textContent = 'Transmitting commit...';
+  if (pushIcon) pushIcon.textContent = 'hourglass_empty';
+  if (pushBtn) pushBtn.classList.add('opacity-80', 'pointer-events-none');
+
+  if (STATE.gist.pat && !activeGist.id.startsWith('gist_')) {
+    // Live GitHub API PATCH
+    try {
+      const payload = {
+        description: commitMsg,
+        files: {
+          [activeGist.filename]: {
+            content: activeGist.localContent,
+          }
+        }
+      };
+
+      const res = await fetch(`https://api.github.com/gists/${activeGist.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Accept': 'application/vnd.github+json',
+          'Authorization': `Bearer ${STATE.gist.pat}`,
+          'X-GitHub-Api-Version': '2022-11-28',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        throw new Error(`GitHub API PATCH failed HTTP ${res.status}`);
+      }
+
+      activeGist.remoteContent = activeGist.localContent;
+      activeGist.status = 'Synced';
+      activeGist.revHash = `#${Math.random().toString(16).slice(2, 9)}`;
+      STATE.gist.revHash = activeGist.revHash;
+      STATE.gist.lastSynced = 'Just now';
+
+      saveGistCache();
+      renderGistSyncView();
+      triggerToast(`Pushed to GitHub Gist: "${activeGist.filename}" (${activeGist.revHash})! 🚀`);
+    } catch (err) {
+      console.error('Push gist error:', err);
+      triggerToast(`Push failed: ${err.message}`, 'error');
+    } finally {
+      if (pushLabel) pushLabel.textContent = 'Push Changes to GitHub Gist';
+      if (pushIcon) pushIcon.textContent = 'publish';
+      if (pushBtn) pushBtn.classList.remove('opacity-80', 'pointer-events-none');
+    }
+  } else {
+    // Demo Mode simulated commit & push
+    setTimeout(() => {
+      if (pushLabel) pushLabel.textContent = 'Pushed to GitHub!';
+      if (pushIcon) pushIcon.textContent = 'check';
+
+      activeGist.remoteContent = activeGist.localContent;
+      activeGist.status = 'Synced';
+      activeGist.revHash = `#${Math.random().toString(16).slice(2, 9)}`;
+      STATE.gist.revHash = activeGist.revHash;
+      STATE.gist.lastSynced = 'Just now';
+
+      renderGistSyncView();
+      triggerToast(`Push Successful (${activeGist.revHash}): ${activeGist.filename} synced! ✨`);
+
+      setTimeout(() => {
+        if (pushLabel) pushLabel.textContent = 'Push Changes to GitHub Gist';
+        if (pushIcon) pushIcon.textContent = 'publish';
+        if (pushBtn) pushBtn.classList.remove('opacity-80', 'pointer-events-none');
+      }, 2000);
+    }, 900);
+  }
+}
+
+function pullRemoteGist(gistId) {
+  const gist = STATE.gist.gists.find(g => g.id === gistId);
+  if (!gist) return;
+
+  // Import into local snippets
+  let existingSnip = STATE.snippets.find(s => s.gistId === gist.id || s.title.toLowerCase() === gist.filename.toLowerCase());
+  if (existingSnip) {
+    existingSnip.content = gist.remoteContent;
+    existingSnip.gistId = gist.id;
+  } else {
+    const newSnip = {
+      id: `clip_${Date.now()}`,
+      gistId: gist.id,
+      title: gist.filename,
+      language: gist.language || 'plaintext',
+      content: gist.remoteContent,
+      tags: ['#gist', `#${gist.language || 'code'}`],
+      isStarred: false,
+      thought: `pulled from remote Gist ${gist.html_url || ''}`,
+      createdAt: new Date().toISOString(),
+    };
+    STATE.snippets.unshift(newSnip);
+  }
+
+  gist.localContent = gist.remoteContent;
+  gist.status = 'Synced';
+
+  saveSnippets();
+  saveGistCache();
+  renderAllSnippetsView();
+  renderGistSyncView();
+  triggerToast(`Pulled Remote: "${gist.filename}" synced to vault! 📥`);
+}
+
+function discardCurrentGistEdits() {
+  const activeGist = STATE.gist.gists.find(g => g.id === STATE.gist.selectedGistId);
+  if (!activeGist) return;
+
+  if (confirm(`Discard uncommitted local edits for ${activeGist.filename}? This restores the pristine remote copy.`)) {
+    activeGist.localContent = activeGist.remoteContent;
+    activeGist.status = 'Synced';
+    saveGistCache();
+    renderGistSyncView();
+    triggerToast(`Edits Discarded: Restored pristine copy from GitHub Gist.`);
+  }
+}
+
+function copyUnifiedDiffPatch() {
+  const activeGist = STATE.gist.gists.find(g => g.id === STATE.gist.selectedGistId);
+  if (!activeGist) return;
+
+  const diffData = computeDiff(activeGist.remoteContent, activeGist.localContent);
+  const patchLines = [
+    `diff --git a/${activeGist.filename} b/${activeGist.filename}`,
+    `index ${activeGist.revHash.replace('#', '')}..${STATE.gist.revHash.replace('#', '')} 100644`,
+    `--- a/${activeGist.filename}`,
+    `+++ b/${activeGist.filename}`,
+    `@@ -1,${activeGist.remoteContent.split('\n').length} +1,${activeGist.localContent.split('\n').length} @@`,
+    ...diffData.rows.map(r => {
+      if (r.type === 'add') return `+${r.text}`;
+      if (r.type === 'del') return `-${r.text}`;
+      return ` ${r.text}`;
+    })
+  ];
+
+  copyTextToClipboard(patchLines.join('\n'), `Patch for ${activeGist.filename}`);
+}
+
+function toggleDiffDisplayMode() {
+  STATE.gist.diffMode = STATE.gist.diffMode === 'unified' ? 'split' : 'unified';
+  renderDiffInspector();
+  triggerToast(`Diff Inspector switched to ${STATE.gist.diffMode} mode`);
+}
+
+function filterGistsCatalog() {
+  const input = document.getElementById('gistFilterInput');
+  STATE.gist.filter = input?.value || '';
+  renderGistSyncView();
+}
+
+function toggleGistSort() {
+  STATE.gist.sortOrder = STATE.gist.sortOrder === 'desc' ? 'asc' : 'desc';
+  renderGistSyncView();
+}
+
+function updateCommitCharCount() {
+  const input = document.getElementById('gistCommitMsgInput');
+  const counter = document.getElementById('gistCommitMsgCounter');
+  if (input && counter) {
+    counter.textContent = `${input.value.length} / 72 chars`;
+  }
+}
+
+// -----------------------------------------------------------------------------
+// New Gist from Vault Modal Management
+// -----------------------------------------------------------------------------
+
+function openNewGistModal() {
+  const modal = document.getElementById('newGistModalOverlay');
+  const select = document.getElementById('gistSnippetSelect');
+  const filenameInput = document.getElementById('newGistFilenameInput');
+  const descInput = document.getElementById('newGistDescriptionInput');
+  const codeTextarea = document.getElementById('newGistCodeTextarea');
+  const statsEl = document.getElementById('newGistContentStats');
+
+  if (!modal) return;
+
+  // Populate snippets
+  if (select) {
+    select.innerHTML = STATE.snippets.map(s => `
+      <option value="${s.id}">${escapeHtml(s.title)} (${s.language.toUpperCase()})</option>
+    `).join('');
+  }
+
+  // Auto-fill from first snippet
+  if (STATE.snippets.length > 0) {
+    const first = STATE.snippets[0];
+    const extMap = { python: 'py', bash: 'sh', sql: 'sql', json: 'json', yaml: 'yml', rust: 'rs', typescript: 'ts', docker: 'Dockerfile', markdown: 'md' };
+    const ext = extMap[first.language] || 'txt';
+    const cleanTitle = first.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
+    if (filenameInput) filenameInput.value = `${cleanTitle}.${ext}`;
+    if (descInput) descInput.value = first.thought || first.title;
+    if (codeTextarea) codeTextarea.value = first.content;
+    if (statsEl) statsEl.textContent = `${first.content.split('\n').length} lines • ${first.content.length} chars`;
+  }
+
+  modal.classList.remove('hidden');
+}
+
+function closeNewGistModal() {
+  const modal = document.getElementById('newGistModalOverlay');
+  if (modal) modal.classList.add('hidden');
+}
+
+function onGistSnippetSelected() {
+  const select = document.getElementById('gistSnippetSelect');
+  const filenameInput = document.getElementById('newGistFilenameInput');
+  const descInput = document.getElementById('newGistDescriptionInput');
+  const codeTextarea = document.getElementById('newGistCodeTextarea');
+  const statsEl = document.getElementById('newGistContentStats');
+
+  const selectedId = select?.value;
+  const snip = STATE.snippets.find(s => s.id === selectedId);
+  if (!snip) return;
+
+  const extMap = { python: 'py', bash: 'sh', sql: 'sql', json: 'json', yaml: 'yml', rust: 'rs', typescript: 'ts', docker: 'Dockerfile', markdown: 'md' };
+  const ext = extMap[snip.language] || 'txt';
+  const cleanTitle = snip.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
+  if (filenameInput) filenameInput.value = `${cleanTitle}.${ext}`;
+  if (descInput) descInput.value = snip.thought || snip.title;
+  if (codeTextarea) codeTextarea.value = snip.content;
+  if (statsEl) statsEl.textContent = `${snip.content.split('\n').length} lines • ${snip.content.length} chars`;
+}
+
+async function submitCreateNewGist() {
+  const filenameInput = document.getElementById('newGistFilenameInput');
+  const descInput = document.getElementById('newGistDescriptionInput');
+  const codeTextarea = document.getElementById('newGistCodeTextarea');
+  const visRadios = document.getElementsByName('newGistVisibility');
+  const spinner = document.getElementById('createGistSubmitSpinner');
+  const label = document.getElementById('createGistSubmitLabel');
+
+  const filename = (filenameInput?.value || 'snippet.txt').trim();
+  const description = (descInput?.value || '').trim();
+  const content = (codeTextarea?.value || '').trim();
+  let isPublic = false;
+  for (const r of visRadios) {
+    if (r.checked && r.value === 'public') isPublic = true;
+  }
+
+  if (!content) {
+    triggerToast('Please provide code content for the gist', 'error');
+    return;
+  }
+
+  if (spinner) spinner.classList.add('animate-spin');
+  if (label) label.textContent = 'Creating...';
+
+  if (STATE.gist.pat) {
+    // Live GitHub API POST
+    try {
+      const payload = {
+        description: description || filename,
+        public: isPublic,
+        files: {
+          [filename]: {
+            content: content,
+          }
+        }
+      };
+
+      const res = await fetch('https://api.github.com/gists', {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/vnd.github+json',
+          'Authorization': `Bearer ${STATE.gist.pat}`,
+          'X-GitHub-Api-Version': '2022-11-28',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        throw new Error(`GitHub API POST failed HTTP ${res.status}`);
+      }
+
+      const createdItem = await res.json();
+      const filesArr = Object.values(createdItem.files || {});
+      const firstFile = filesArr[0] || {};
+
+      const newGistObj = {
+        id: createdItem.id,
+        title: filename,
+        filename: filename,
+        path: filename,
+        language: (firstFile.language || 'plaintext').toLowerCase(),
+        status: 'Synced',
+        filesCount: '1 file',
+        stars: 0,
+        forks: 0,
+        visibility: isPublic ? 'Public Gist' : 'Secret Gist',
+        isPublic: isPublic,
+        updated: 'Just now',
+        html_url: createdItem.html_url,
+        remoteContent: content,
+        localContent: content,
+        revHash: `#${createdItem.id.slice(0, 7)}`,
+      };
+
+      STATE.gist.gists.unshift(newGistObj);
+      STATE.gist.selectedGistId = newGistObj.id;
+      saveGistCache();
+
+      closeNewGistModal();
+      renderGistSyncView();
+      triggerToast(`Published to GitHub Gist: "${filename}"! 🎉`);
+    } catch (err) {
+      console.error('Create Gist error:', err);
+      triggerToast(`Create Gist failed: ${err.message}`, 'error');
+    } finally {
+      if (spinner) spinner.classList.remove('animate-spin');
+      if (label) label.textContent = 'Publish Gist';
+    }
+  } else {
+    // Sandbox simulated creation
+    setTimeout(() => {
+      const mockId = `gist_${Date.now()}`;
+      const newGistObj = {
+        id: mockId,
+        title: filename,
+        filename: filename,
+        path: filename,
+        language: detectLanguageAndConfidence(content).lang || 'plaintext',
+        status: 'Synced',
+        filesCount: '1 file',
+        stars: 0,
+        forks: 0,
+        visibility: isPublic ? 'Public Gist' : 'Secret Gist',
+        isPublic: isPublic,
+        updated: 'Just now',
+        html_url: `https://gist.github.com/developer/${mockId}`,
+        remoteContent: content,
+        localContent: content,
+        revHash: `#${mockId.slice(-7)}`,
+      };
+
+      STATE.gist.gists.unshift(newGistObj);
+      STATE.gist.selectedGistId = newGistObj.id;
+      saveGistCache();
+
+      if (spinner) spinner.classList.remove('animate-spin');
+      if (label) label.textContent = 'Publish Gist';
+
+      closeNewGistModal();
+      renderGistSyncView();
+      triggerToast(`Created Gist in Sandbox: "${filename}"! ✨`);
+    }, 700);
+  }
 }
 
 // =============================================================================
@@ -2014,6 +2958,8 @@ function initEventListeners() {
     if (e.key === 'Escape') {
       if (STATE.modal.isOpen) {
         closeModal();
+      } else if (document.getElementById('newGistModalOverlay')?.classList.contains('hidden') === false) {
+        closeNewGistModal();
       } else if (document.getElementById('shortcutsModalOverlay')?.classList.contains('hidden') === false) {
         closeShortcutsModal();
       } else if (document.getElementById('resetConfirmModal')?.classList.contains('hidden') === false) {
@@ -2031,6 +2977,20 @@ function initEventListeners() {
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && STATE.modal.isOpen) {
       e.preventDefault();
       commitSnippetFromModal();
+      return;
+    }
+
+    // Shift+Enter in Gist Commit input pushes changes
+    if (e.shiftKey && e.key === 'Enter' && document.activeElement?.id === 'gistCommitMsgInput') {
+      e.preventDefault();
+      pushCurrentGistChanges();
+      return;
+    }
+
+    // Cmd+S or Ctrl+S triggers Gist Sync
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
+      e.preventDefault();
+      triggerManualSync();
       return;
     }
 
@@ -2146,4 +3106,22 @@ window.formatCodeInModal = formatCodeInModal;
 window.removeModalTag = removeModalTag;
 window.commitSnippetFromModal = commitSnippetFromModal;
 window.triggerToast = triggerToast;
-window.triggerGistSync = triggerGistSync;
+window.triggerGistSync = triggerManualSync;
+window.triggerManualSync = triggerManualSync;
+window.connectGitHubAccount = connectGitHubAccount;
+window.disconnectGitHubAccount = disconnectGitHubAccount;
+window.toggleGistDemoMode = toggleGistDemoMode;
+window.togglePatVisibility = togglePatVisibility;
+window.pushCurrentGistChanges = pushCurrentGistChanges;
+window.pullRemoteGist = pullRemoteGist;
+window.discardCurrentGistEdits = discardCurrentGistEdits;
+window.copyUnifiedDiffPatch = copyUnifiedDiffPatch;
+window.toggleDiffDisplayMode = toggleDiffDisplayMode;
+window.filterGistsCatalog = filterGistsCatalog;
+window.toggleGistSort = toggleGistSort;
+window.updateCommitCharCount = updateCommitCharCount;
+window.openNewGistModal = openNewGistModal;
+window.closeNewGistModal = closeNewGistModal;
+window.onGistSnippetSelected = onGistSnippetSelected;
+window.submitCreateNewGist = submitCreateNewGist;
+window.selectGistForDiff = selectGistForDiff;

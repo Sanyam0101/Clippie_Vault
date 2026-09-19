@@ -496,71 +496,289 @@
 
       <!-- VIEW 4: GIST SYNC -->
       <section id="view-gist-sync" class="workspace-view hidden flex flex-col space-y-4">
-        <!-- Top Workspace Context -->
+        <!-- Top Workspace Context & Metrics Sparklines -->
         <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 p-4 rounded-xl bg-surface-card border border-border-subtle">
           <div>
             <div class="flex items-center gap-2 mb-1">
               <span class="font-mono text-[11px] text-syntax-variable tracking-widest uppercase">WORKSPACE // CLOUD SYNC</span>
               <span class="text-text-muted font-mono text-[11px]">/</span>
-              <span class="px-1.5 py-0.2 rounded bg-surface-container font-mono text-[10px] text-text-secondary">v2.0.0-core</span>
+              <span class="px-1.5 py-0.2 rounded bg-surface-container font-mono text-[10px] text-text-secondary">v2.4.9-core</span>
             </div>
             <h1 class="text-[20px] font-bold text-text-primary tracking-tight">Gist Sync</h1>
-            <p class="text-text-secondary text-[13px]">Bi-directional synchronization between Clippie local repository and GitHub Gists.</p>
+            <p class="text-text-secondary text-[13px]">Bi-directional two-way synchronization between Clippie local repository and GitHub Gists.</p>
           </div>
-          <!-- Metrics Sparklines -->
+          <!-- Quick Metrics Sparklines -->
           <div class="flex items-center gap-3 bg-surface-low px-4 py-2 rounded-lg border border-border-subtle">
-            <div>
-              <span class="font-mono text-[10px] text-text-muted block">API RATE LIMIT</span>
-              <span class="font-mono text-[13px] text-text-primary font-semibold">4,982 / 5,000</span>
+            <div class="flex flex-col items-start pr-3">
+              <span class="font-mono text-[10px] text-text-muted">API RATE LIMIT</span>
+              <span id="gistRateLimitText" class="font-mono text-[13px] text-text-primary font-semibold">5,000 / 5,000</span>
             </div>
             <div class="h-6 w-px bg-border-subtle"></div>
-            <div>
-              <span class="font-mono text-[10px] text-text-muted block">CACHE HIT ETAG</span>
-              <span class="font-mono text-[13px] text-secondary font-semibold">99.4% Active</span>
+            <div class="flex flex-col items-start pl-1">
+              <span class="font-mono text-[10px] text-text-muted">CACHE HIT ETAG</span>
+              <span id="gistCacheEtagText" class="font-mono text-[13px] text-secondary font-semibold">99.4% (Active)</span>
             </div>
+            <!-- Inline Micro SVG Chart for Rate Window -->
+            <svg class="w-16 h-6 text-syntax-func ml-2 overflow-visible" fill="none" viewBox="0 0 64 24">
+              <path d="M0 20 L10 18 L20 14 L30 16 L40 9 L50 11 L64 4" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75"></path>
+              <path d="M0 20 L10 18 L20 14 L30 16 L40 9 L50 11 L64 4 V 24 H 0 Z" fill="currentColor" fill-opacity="0.12"></path>
+            </svg>
           </div>
         </div>
 
-        <!-- Sync Status Banner -->
-        <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 p-4 bg-surface-card rounded-xl border border-border-subtle shadow-md">
-          <div class="flex items-center gap-3">
-            <div class="w-2.5 h-2.5 rounded-full bg-secondary shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse"></div>
-            <div class="flex flex-col sm:flex-row sm:items-center gap-2 font-mono text-[12px]">
-              <span class="text-text-primary font-medium">GitHub Remote:</span>
-              <span class="text-syntax-func font-semibold hover:underline cursor-pointer">github.com/developer/clippie-vault</span>
-              <span class="px-1.5 py-0.2 rounded bg-surface-container text-secondary text-[10px]">Connected</span>
+        <!-- GitHub Personal Access Token Configuration Panel -->
+        <!-- 1. Disconnected State -->
+        <div id="gistPatDisconnectedCard" class="p-4 rounded-xl bg-surface-card border border-border-subtle shadow-sm space-y-3">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border-subtle pb-3">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-text-primary">
+                <span class="material-symbols-outlined text-[18px]">key</span>
+              </div>
+              <div>
+                <h3 class="text-[14px] font-semibold text-text-primary">Connect GitHub Account</h3>
+                <p class="text-text-muted font-mono text-[11px]">Authenticate with a GitHub Personal Access Token (PAT) with <code class="text-syntax-keyword font-mono">gist</code> scope.</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <a href="https://github.com/settings/tokens/new?scopes=gist&description=Clippie+Vault+Sync" target="_blank" rel="noopener noreferrer" class="interactive-btn px-2.5 py-1 rounded bg-surface-low hover:bg-surface-container text-primary font-mono text-[11px] flex items-center gap-1 border border-border-subtle transition-colors">
+                <span>Generate Token on GitHub</span>
+                <span class="material-symbols-outlined text-[13px]">open_in_new</span>
+              </a>
+              <button id="enableDemoModeBtn" onclick="toggleGistDemoMode()" class="interactive-btn px-2.5 py-1 rounded bg-surface-container hover:bg-surface-high text-text-secondary hover:text-text-primary font-mono text-[11px] border border-border-subtle transition-colors" type="button">
+                Use Demo Data
+              </button>
             </div>
           </div>
-          <div class="flex items-center gap-3 font-mono text-[11px] text-text-muted">
-            <span id="gistLastSyncedText">Last Synced: Just now</span>
-            <span>•</span>
-            <span>Revision: <strong id="gistRevHash" class="text-syntax-variable font-normal">#d4a9f1c</strong></span>
-          </div>
-          <div class="flex items-center gap-2">
-            <button id="manualSyncBtn" class="interactive-btn px-3 py-1.5 rounded-lg bg-surface-container hover:bg-surface-high text-text-primary font-mono text-[12px] flex items-center gap-1.5 border border-border-subtle" type="button">
-              <span id="syncSpinIcon" class="material-symbols-outlined text-[16px] text-primary">sync</span>
-              <span>Sync Now</span>
-              <kbd class="px-1 py-0.2 bg-surface-lowest text-[10px] text-text-muted rounded">⌘S</kbd>
+
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-1">
+            <div class="relative flex-1">
+              <span class="material-symbols-outlined absolute left-3 top-2.5 text-text-muted text-[17px] pointer-events-none">password</span>
+              <input id="gistPatInput" type="password" placeholder="Paste GitHub PAT (e.g. ghp_xxxxxxxxxxxxxxxxxxxx)" class="w-full pl-9 pr-10 py-2 bg-surface-low rounded-lg text-[12px] font-mono text-text-primary placeholder:text-text-muted border border-border-subtle focus:border-border-focus focus:outline-none transition-all">
+              <button id="togglePatVisibilityBtn" onclick="togglePatVisibility()" class="absolute right-2.5 top-2.5 text-text-muted hover:text-text-primary" type="button" title="Toggle visibility">
+                <span id="patVisibilityIcon" class="material-symbols-outlined text-[17px]">visibility</span>
+              </button>
+            </div>
+            <button id="connectPatBtn" onclick="connectGitHubAccount()" class="interactive-btn px-4 py-2 rounded-lg bg-primary hover:bg-blue-600 text-white font-mono text-[12px] font-semibold flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all" type="button">
+              <span id="connectPatSpinner" class="material-symbols-outlined text-[16px]">cloud_sync</span>
+              <span id="connectPatLabel">Connect & Verify</span>
             </button>
           </div>
         </div>
 
-        <!-- Terminal Log Strip -->
-        <div class="flex items-center justify-between px-3 py-2 bg-surface-lowest rounded-lg border border-border-subtle font-mono text-[11px]">
-          <div class="flex items-center gap-2 overflow-hidden truncate">
-            <span class="text-syntax-func">system.log &gt;</span>
-            <span class="text-syntax-comment truncate">// memo: Personal Access Token (PAT) held in secure session memory. ETag conditional requests prevent API quota exhaustion.</span>
+        <!-- 2. Connected State (Hidden by default, shown when token active) -->
+        <div id="gistPatConnectedCard" class="hidden p-4 rounded-xl bg-surface-card border border-secondary/30 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <img id="gistUserAvatar" src="" alt="GitHub Avatar" class="w-10 h-10 rounded-full border border-secondary/40 object-cover bg-surface-container">
+            <div class="flex flex-col">
+              <div class="flex items-center gap-2">
+                <span id="gistUserName" class="text-[14px] font-semibold text-text-primary">Developer</span>
+                <a id="gistUserLogin" href="#" target="_blank" rel="noopener noreferrer" class="font-mono text-[12px] text-syntax-func hover:underline">@developer</a>
+                <span class="px-1.5 py-0.2 rounded bg-secondary-container text-secondary text-[10px] font-mono font-medium">PAT Active</span>
+              </div>
+              <div class="flex items-center gap-3 font-mono text-[11px] text-text-muted mt-0.5">
+                <span id="gistPublicCount">0 public gists</span>
+                <span>•</span>
+                <span id="gistSecretCount">0 secret gists</span>
+                <span>•</span>
+                <span class="text-secondary flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-secondary"></span> ETag cached</span>
+              </div>
+            </div>
           </div>
-          <div class="hidden sm:flex items-center gap-2 text-text-muted shrink-0 pl-2">
-            <span>PID: 84192</span>
-            <span>•</span>
-            <span class="text-secondary">Webhook 200 OK</span>
+          <div class="flex items-center gap-2">
+            <button onclick="disconnectGitHubAccount()" class="interactive-btn px-3 py-1.5 rounded-lg bg-surface-low hover:bg-red-500/20 text-text-muted hover:text-red-400 font-mono text-[11px] border border-border-subtle transition-colors" type="button">
+              Disconnect Token
+            </button>
           </div>
         </div>
 
-        <!-- Synced Gists List -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="gistCardsContainer">
-          <!-- Dynamically populated via app.js -->
+        <!-- Sync Status High-Density Banner -->
+        <div class="flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4 p-4 bg-surface-card rounded-xl border border-border-subtle shadow-md">
+          <!-- Remote Node Details -->
+          <div class="flex items-center gap-3">
+            <div class="w-2.5 h-2.5 rounded-full bg-secondary shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse"></div>
+            <div class="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 font-mono text-[12px]">
+              <span class="text-text-primary font-medium">GitHub Remote:</span>
+              <a id="gistRemoteLink" href="https://gist.github.com" target="_blank" rel="noopener noreferrer" class="text-syntax-func font-mono hover:underline cursor-pointer">gist.github.com</a>
+              <span id="gistRemoteStatusBadge" class="px-1.5 py-0.5 rounded bg-surface-container text-secondary text-[10px]">Connected</span>
+            </div>
+          </div>
+          <!-- Center Status & Hash Metadata -->
+          <div class="flex items-center gap-2 text-text-muted font-mono text-[11px]">
+            <span class="material-symbols-outlined text-[16px] text-text-secondary">history</span>
+            <span class="text-text-secondary">Last Synced: <strong id="gistLastSyncedText" class="text-text-primary font-normal">Just now</strong></span>
+            <span>•</span>
+            <span class="font-mono text-text-secondary">Revision: <span id="gistRevHash" class="text-syntax-variable font-medium">#d4a9f1c</span></span>
+            <span>•</span>
+            <span class="text-secondary flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-secondary"></span> Auto-rebase: Clean</span>
+          </div>
+          <!-- Sync Controls -->
+          <div class="flex items-center gap-2">
+            <button id="manualSyncBtn" onclick="triggerManualSync()" class="interactive-btn inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-surface-container hover:bg-surface-high text-text-primary font-mono text-[12px] transition-all border border-border-subtle active:scale-95" type="button">
+              <span id="syncSpinIcon" class="material-symbols-outlined text-[16px] text-primary">sync</span>
+              <span>Sync Now</span>
+              <kbd class="px-1 py-0.2 bg-surface-lowest text-[10px] text-text-muted rounded font-mono">⌘S</kbd>
+            </button>
+            <button id="openNewGistModalBtn" onclick="openNewGistModal()" class="interactive-btn inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-primary hover:bg-blue-600 text-white font-mono text-[12px] font-semibold transition-all shadow-sm active:scale-95" type="button">
+              <span class="material-symbols-outlined text-[16px]">bookmark_add</span>
+              <span>New Gist from Vault</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Developer Thought Stream / Terminal Log Strip -->
+        <div class="flex items-center justify-between px-3.5 py-2 bg-surface-lowest rounded-lg border border-border-subtle font-mono text-[11px]">
+          <div class="flex items-center gap-2 overflow-x-auto whitespace-nowrap min-w-0">
+            <span class="text-syntax-func font-mono">system.log</span>
+            <span class="text-text-muted font-mono text-[11px]">&gt;</span>
+            <p class="text-text-muted font-mono text-[11px] truncate">
+              <span id="gistTerminalLogText" class="text-syntax-comment">// memo: Personal Access Token (PAT) securely held in local session storage. ETag conditional requests prevent API quota exhaustion.</span>
+            </p>
+          </div>
+          <div class="hidden md:flex items-center gap-3 shrink-0 pl-4 font-mono text-[11px] text-text-muted">
+            <span>PID: <span class="font-mono text-text-secondary">84192</span></span>
+            <span>•</span>
+            <span class="flex items-center gap-1 text-secondary"><span class="w-1 h-1 rounded-full bg-secondary"></span> Webhook 200 OK</span>
+          </div>
+        </div>
+
+        <!-- Main Workspace Two-Column Diff & Sync Layout (12 cols) -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+          
+          <!-- Column 1: Active Synced Gists Catalog (5 cols) -->
+          <section class="lg:col-span-5 flex flex-col space-y-3">
+            <!-- List Filter & Subhead -->
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="text-[14px] font-semibold text-text-primary">Active Synced Gists</span>
+                <span id="gistManagedCountBadge" class="px-2 py-0.5 rounded-full bg-surface-container font-mono text-[11px] text-text-secondary">4 Managed</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <div class="relative flex items-center">
+                  <span class="material-symbols-outlined absolute left-2 text-[14px] text-text-muted pointer-events-none">search</span>
+                  <input id="gistFilterInput" oninput="filterGistsCatalog()" type="text" placeholder="Filter gists..." class="w-32 focus:w-44 h-7 pl-6 pr-2 bg-surface-low rounded text-[11px] font-mono text-text-primary border border-border-subtle focus:border-border-focus focus:outline-none transition-all">
+                </div>
+                <button id="gistSortBtn" onclick="toggleGistSort()" class="p-1 text-text-muted hover:text-text-primary rounded bg-surface-low hover:bg-surface-container transition-colors border border-border-subtle" title="Sort by last updated">
+                  <span class="material-symbols-outlined text-[16px]">swap_vert</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Gist Cards List Container -->
+            <div id="gistCardsContainer" class="flex flex-col space-y-3">
+              <!-- Dynamically populated via app.js -->
+            </div>
+          </section>
+
+          <!-- Column 2: Git Diff Inspector & Sync Staging Pane (7 cols) -->
+          <section class="lg:col-span-7 flex flex-col space-y-3">
+            <!-- Diff Inspector Card -->
+            <div id="gistDiffInspectorCard" class="flex flex-col space-y-3 p-4 bg-surface-card rounded-xl border border-border-subtle shadow-md">
+              
+              <!-- Diff Header -->
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div class="flex items-center gap-2 min-w-0">
+                  <span class="px-2 py-0.5 rounded bg-surface-container font-mono text-[11px] text-syntax-func">DIFF VIEW</span>
+                  <h2 id="diffFileName" class="text-[15px] font-bold text-text-primary font-mono truncate">fastapi-jwt-auth-middleware.py</h2>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                  <span class="font-mono text-[11px] text-text-muted">Local vs Remote <strong id="diffRevTag" class="text-syntax-variable font-mono">#4b2a8e</strong></span>
+                  <button id="toggleDiffModeBtn" onclick="toggleDiffDisplayMode()" class="p-1 rounded bg-surface-container hover:bg-surface-high text-text-secondary hover:text-text-primary transition-colors border border-border-subtle" title="Toggle Unified / Side-by-side View">
+                    <span class="material-symbols-outlined text-[16px]">view_column</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Diff Statistics Pill Bar -->
+              <div class="flex flex-wrap items-center justify-between gap-2 px-3 py-2 bg-surface-lowest rounded-lg font-mono text-[11px] border border-border-subtle">
+                <div class="flex items-center gap-3">
+                  <span id="diffAdditionsCount" class="text-secondary font-mono font-semibold">+6 additions</span>
+                  <span id="diffDeletionsCount" class="text-syntax-keyword font-mono font-semibold">-2 deletions</span>
+                  <span class="text-text-muted">|</span>
+                  <span class="text-text-muted font-mono">Mode: 100644 (Blob)</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="inline-flex items-center gap-1 text-text-muted">
+                    <span class="w-2 h-2 rounded-full bg-syntax-keyword"></span> Remote (HEAD)
+                  </span>
+                  <span class="text-text-muted">→</span>
+                  <span class="inline-flex items-center gap-1 text-text-muted">
+                    <span class="w-2 h-2 rounded-full bg-secondary"></span> Local Workspace
+                  </span>
+                </div>
+              </div>
+
+              <!-- Code Diff Engine Window -->
+              <div class="rounded-lg bg-surface-canvas overflow-hidden flex flex-col font-mono text-[12px] border border-border-subtle shadow-inner">
+                <!-- Terminal Title Bar -->
+                <div class="flex items-center justify-between px-3 py-1.5 bg-surface-lowest text-text-muted font-mono text-[11px] border-b border-border-subtle select-none">
+                  <div class="flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-syntax-keyword/70"></span>
+                    <span class="w-2.5 h-2.5 rounded-full bg-syntax-variable/70"></span>
+                    <span class="w-2.5 h-2.5 rounded-full bg-secondary/70"></span>
+                    <span id="diffWindowPath" class="ml-2 font-mono text-text-secondary">app/core/security/jwt_bearer.py</span>
+                  </div>
+                  <span id="diffMetaBadge" class="font-mono text-text-muted">UTF-8 • Python 3.12</span>
+                </div>
+
+                <!-- Code Rows Comparison Container -->
+                <div id="diffRowsContainer" class="overflow-x-auto text-left leading-relaxed py-2 select-text font-mono text-[12px] max-h-[420px]">
+                  <!-- Dynamically populated line rows with additions, deletions, context -->
+                </div>
+              </div>
+
+              <!-- Staging & Commit Input Box -->
+              <div class="flex flex-col gap-1.5 pt-1">
+                <label class="font-mono text-[10px] text-text-muted flex items-center justify-between" for="gistCommitMsgInput">
+                  <span>COMMIT MESSAGE FOR REMOTE GIST REVISION</span>
+                  <span class="text-text-secondary">CHANGES READY TO STAGE</span>
+                </label>
+                <div class="relative flex items-center">
+                  <span class="material-symbols-outlined absolute left-3 text-[17px] text-syntax-variable pointer-events-none">commit</span>
+                  <input id="gistCommitMsgInput" type="text" value="feat: add token clock skew tolerance and refresh TTL" oninput="updateCommitCharCount()" class="w-full h-9 pl-9 pr-24 bg-surface-low rounded-lg text-[12px] font-mono text-text-primary border border-border-subtle focus:border-border-focus focus:outline-none transition-all">
+                  <span id="gistCommitMsgCounter" class="absolute right-3 text-[11px] text-text-muted font-mono">51 / 72 chars</span>
+                </div>
+              </div>
+
+              <!-- Primary Push & Staging Action Controls -->
+              <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 pt-1">
+                <div class="flex items-center gap-2">
+                  <button id="discardEditsBtn" onclick="discardCurrentGistEdits()" class="interactive-btn inline-flex items-center justify-center gap-1.5 h-8 px-3 rounded-lg bg-surface-low hover:bg-red-500/20 text-red-400 font-mono text-[11px] border border-border-subtle transition-colors active:scale-95" type="button">
+                    <span class="material-symbols-outlined text-[15px]">undo</span>
+                    <span>Discard Local Edits</span>
+                  </button>
+                  <button id="copyPatchBtn" onclick="copyUnifiedDiffPatch()" class="interactive-btn inline-flex items-center justify-center gap-1 h-8 px-3 rounded-lg bg-surface-low hover:bg-surface-container text-text-secondary hover:text-text-primary font-mono text-[11px] border border-border-subtle transition-colors" type="button">
+                    <span class="material-symbols-outlined text-[15px]">file_copy</span>
+                    <span>Copy Patch</span>
+                  </button>
+                </div>
+                <button id="pushGistBtn" onclick="pushCurrentGistChanges()" class="interactive-btn inline-flex items-center justify-center gap-2 h-9 px-4 rounded-lg bg-primary hover:bg-blue-600 text-white font-mono text-[12px] font-semibold transition-all shadow-md active:scale-95" type="button">
+                  <span id="pushGistIcon" class="material-symbols-outlined text-[17px]">publish</span>
+                  <span id="pushGistLabel">Push Changes to GitHub Gist</span>
+                  <kbd class="px-1.5 py-0.2 bg-white/20 text-white text-[10px] rounded font-mono">⇧⏎</kbd>
+                </button>
+              </div>
+            </div>
+
+            <!-- Sync Diagnostics & Branch Info Panel (3 cols) -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div class="p-3 bg-surface-card rounded-xl border border-border-subtle flex flex-col gap-1">
+                <span class="font-mono text-[10px] text-text-muted uppercase">CONFLICT RESOLUTION</span>
+                <span class="font-mono text-[12px] text-text-primary font-semibold">Local Wins (Auto-rebase)</span>
+                <span class="text-[11px] text-text-secondary font-mono">Clean fast-forward merge</span>
+              </div>
+              <div class="p-3 bg-surface-card rounded-xl border border-border-subtle flex flex-col gap-1">
+                <span class="font-mono text-[10px] text-text-muted uppercase">TRANSPORT PROTOCOL</span>
+                <span class="font-mono text-[12px] text-syntax-func font-semibold">HTTPS / TLS 1.3</span>
+                <span class="text-[11px] text-text-secondary font-mono">OAuth2 Bearer Encrypted</span>
+              </div>
+              <div class="p-3 bg-surface-card rounded-xl border border-border-subtle flex flex-col gap-1">
+                <span class="font-mono text-[10px] text-text-muted uppercase">WEBHOOK TRIGGER</span>
+                <span class="font-mono text-[12px] text-secondary font-semibold">cli:save_vault_event</span>
+                <span class="text-[11px] text-text-secondary font-mono">Debounce time 400ms</span>
+              </div>
+            </div>
+          </section>
+
         </div>
       </section>
 
@@ -1011,6 +1229,83 @@
             <span class="material-symbols-outlined text-[15px]">check</span>
             <span id="modalCommitBtnText">commit_snippet</span>
             <kbd class="px-1 py-0.2 rounded bg-white/20 text-[9px]">⌘↵</kbd>
+          </button>
+        </div>
+      </div>
+  <!-- =========================================================================
+       NEW GIST FROM VAULT MODAL
+       ========================================================================= -->
+  <div id="newGistModalOverlay" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md hidden">
+    <div class="w-full max-w-2xl bg-surface-card rounded-xl border border-border-subtle shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <!-- Header -->
+      <div class="flex items-center justify-between px-5 py-3.5 bg-surface-low border-b border-border-subtle">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary text-[20px]">deployed_code</span>
+          <h3 class="font-semibold text-text-primary text-[15px]">Create GitHub Gist from Vault</h3>
+        </div>
+        <button onclick="closeNewGistModal()" class="text-text-muted hover:text-text-primary p-1 rounded hover:bg-surface-container transition-colors" type="button">
+          <span class="material-symbols-outlined text-[18px]">close</span>
+        </button>
+      </div>
+
+      <!-- Body -->
+      <div class="p-5 space-y-4 overflow-y-auto">
+        <!-- Snippet Picker Dropdown -->
+        <div class="space-y-1.5 font-mono text-[12px]">
+          <label class="text-text-muted text-[11px] uppercase tracking-wider block" for="gistSnippetSelect">Select Snippet to Export</label>
+          <select id="gistSnippetSelect" onchange="onGistSnippetSelected()" class="w-full bg-surface-low border border-border-subtle rounded-lg px-3 py-2 text-text-primary text-[12px] focus:border-border-focus focus:outline-none">
+            <!-- Dynamically populated from STATE.snippets -->
+          </select>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 font-mono text-[12px]">
+          <!-- Filename -->
+          <div class="space-y-1.5">
+            <label class="text-text-muted text-[11px] uppercase tracking-wider block" for="newGistFilenameInput">Gist Filename</label>
+            <input id="newGistFilenameInput" type="text" placeholder="e.g. main.py, config.json" class="w-full bg-surface-low border border-border-subtle rounded-lg px-3 py-2 text-text-primary text-[12px] focus:border-border-focus focus:outline-none">
+          </div>
+          <!-- Visibility Radio -->
+          <div class="space-y-1.5">
+            <span class="text-text-muted text-[11px] uppercase tracking-wider block">Visibility</span>
+            <div class="flex items-center gap-4 pt-1.5">
+              <label class="flex items-center gap-1.5 cursor-pointer text-text-secondary hover:text-text-primary text-[12px]">
+                <input type="radio" name="newGistVisibility" value="secret" checked class="accent-primary">
+                <span>Secret Gist</span>
+              </label>
+              <label class="flex items-center gap-1.5 cursor-pointer text-text-secondary hover:text-text-primary text-[12px]">
+                <input type="radio" name="newGistVisibility" value="public" class="accent-primary">
+                <span>Public Gist</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Description -->
+        <div class="space-y-1.5 font-mono text-[12px]">
+          <label class="text-text-muted text-[11px] uppercase tracking-wider block" for="newGistDescriptionInput">Gist Description</label>
+          <input id="newGistDescriptionInput" type="text" placeholder="Optional description for GitHub Gist" class="w-full bg-surface-low border border-border-subtle rounded-lg px-3 py-2 text-text-primary text-[12px] focus:border-border-focus focus:outline-none">
+        </div>
+
+        <!-- Code Content -->
+        <div class="space-y-1.5 font-mono text-[12px]">
+          <div class="flex items-center justify-between text-text-muted text-[11px]">
+            <span class="uppercase tracking-wider">File Content</span>
+            <span id="newGistContentStats">0 lines</span>
+          </div>
+          <textarea id="newGistCodeTextarea" rows="8" class="w-full bg-surface-lowest border border-border-subtle rounded-lg p-3 text-text-primary font-mono text-[12px] leading-relaxed resize-none focus:border-border-focus focus:outline-none" placeholder="# Gist content..."></textarea>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="px-5 py-3 bg-surface-low border-t border-border-subtle flex items-center justify-between font-mono text-[12px]">
+        <span class="text-text-muted text-[11px]">Direct GitHub API Push</span>
+        <div class="flex items-center gap-2">
+          <button onclick="closeNewGistModal()" class="px-3 py-1.5 rounded border border-border-subtle bg-surface-card hover:bg-surface-container text-text-secondary hover:text-text-primary transition-colors" type="button">
+            Cancel
+          </button>
+          <button id="createGistSubmitBtn" onclick="submitCreateNewGist()" class="interactive-btn px-4 py-1.5 rounded bg-primary text-white hover:bg-blue-600 font-semibold flex items-center gap-1.5 shadow-sm active:scale-95 transition-all" type="button">
+            <span id="createGistSubmitSpinner" class="material-symbols-outlined text-[16px]">cloud_upload</span>
+            <span id="createGistSubmitLabel">Publish Gist</span>
           </button>
         </div>
       </div>

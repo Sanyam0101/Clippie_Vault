@@ -340,3 +340,42 @@ html, body {
     transform: translateX(0);
   }
 }
+
+/* Git Diff Inspector Styling */
+.diff-line-del {
+  background-color: rgba(244, 63, 94, 0.12);
+  color: #fda4af;
+}
+.diff-line-del:hover {
+  background-color: rgba(244, 63, 94, 0.22);
+}
+.diff-line-del .line-del-text {
+  text-decoration: line-through;
+  opacity: 0.85;
+}
+
+.diff-line-add {
+  background-color: rgba(16, 185, 129, 0.12);
+  color: #6ee7b7;
+}
+.diff-line-add:hover {
+  background-color: rgba(16, 185, 129, 0.22);
+}
+
+.diff-line-ctx {
+  color: var(--color-text-secondary);
+}
+.diff-line-ctx:hover {
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+.diff-gutter-num {
+  width: 2.25rem;
+  flex-shrink: 0;
+  text-align: right;
+  padding-right: 0.75rem;
+  user-select: none;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+

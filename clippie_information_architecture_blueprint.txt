@@ -1,0 +1,90 @@
+# ================================================================================
+INFORMATION ARCHITECTURE (IA) BLUEPRINT
+PROJECT: CLIPPIE — THE INTELLIGENT POCKET CLIPBOARD & SNIPPET SUITE
+VERSION: 2.0.0-IA
+
+1. TOP-LEVEL SHELL & GLOBAL LAYOUT (THE DASHBOARD)
+The core application is housed in a single, lightning-fast dashboard divided into persistent structural zones:
+
+1.1 Header Navigation (Persistent Top Bar)
+* Brand Identity: Clippie Logo + Version/Status badge.
+* Global Search Bar: Real-time fuzzy search input (focus shortcut: `/` or `Ctrl+K`).
+* Quick Actions: Theme Toggle (Dark/Light/Monokai), Export/Import JSON button, and primary "+ New Snippet" CTA.
+
+1.2 Filter & Tag Matrix (Sub-Header Row)
+* Language Pills: Quick-filter buttons (`All`, `Python`, `Bash`, `JSON`, `Markdown`, `SQL`).
+* Custom Tags: Dynamic user-created tags (`#deployment`, `#auth`, `#ai`).
+
+1.3 Main Content Area (The Grid)
+* Responsive masonry or card grid rendering filtered snippet objects.
+* Empty State View: Displayed when no snippets exist or search returns 0 results (includes a friendly prompt and quick-add button).
+
+1.4 Mobile Sticky Action Bar (Bottom Fixed for Mobile Views)
+* Thumb-optimized quick buttons for instant search focus and adding a new snippet on the go.
+
+1.5 Notification Layer (Toast Region)
+* Floating, non-blocking notification container positioned at the top-right or bottom-right corner for success/error alerts.
+
+
+2. COMPONENT HIERARCHY: THE SNIPPET CARD
+Each card in the main grid follows a strict internal content architecture:
+
+2.1 Card Header
+* Left: Auto-detected or user-assigned language badge (e.g., `python`, `bash`).
+* Center/Left: Smart Title (editable inline or via modal).
+* Right: Secondary actions (Edit icon, Delete icon).
+
+2.2 Card Body
+* Monospaced code block container styled with the active IDE theme (e.g., VS Code Dark+, Monokai Pro).
+* Line-wrap toggle and syntax highlighter overlay.
+
+2.3 Card Footer
+* Left: Associated tag pills and creation timestamp.
+* Right: Prominent Copy Button with dynamic text/icon state change ("Copy" -> "Copied! ✨").
+
+
+3. CORE USER FLOWS & INTERACTION PATHS
+
+3.1 Flow A: Rapid Capture (Adding a Snippet)
+1. Trigger: User clicks `+ New Snippet` or uses a keyboard shortcut.
+2. Modal State: Clean overlay opens with a large textarea and an optional title field.
+3. Smart Heuristic Engine: 
+   * As the user pastes code, the regex engine automatically detects the language and populates the badge.
+   * If the title field is empty, the system auto-generates a smart title from the first line or syntax structure.
+4. Persistence: User clicks "Save" -> Object is appended to the local state array -> Saved to `localStorage` -> Modal closes -> Card renders instantly at the top of the grid.
+
+3.2 Flow B: Instant Retrieval (Search & Filter)
+1. Trigger: User types a keyword into the global search bar or clicks a language pill.
+2. Filtering Logic: Real-time evaluation of the snippet array matching the query string across titles, raw content, and tags.
+3. UI Response: Grid dynamically re-renders to display only matching cards without page reloads.
+
+3.3 Flow C: One-Click Copy & Feedback
+1. Trigger: User clicks the Copy button on any card.
+2. Execution: Text payload is pushed to `navigator.clipboard.writeText`.
+3. Feedback Loop: 
+   * Button changes color and label to "Copied! ✨" for 1.5 seconds.
+   * A subtle toast notification triggers in the corner: "Copied to clipboard! 📋".
+
+
+4. DATA & STATE ARCHITECTURE (`localStorage` SCHEMA)
+The entire application state is lightweight and contained client-side in a structured JSON schema:
+
+```json
+{
+  "settings": {
+    "theme": "vscode-dark",
+    "autoDetectLanguage": true
+  },
+  "snippets": [
+    {
+      "id": "clip_1758280800000",
+      "title": "Docker Compose Up Command",
+      "language": "yaml",
+      "content": "version: '3.8'\nservices:\n  app:\n    build: .",
+      "tags": ["devops", "docker"],
+      "createdAt": "2026-09-18T11:15:00Z"
+    }
+  ]
+}
+```
+================================================================================

@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="en" class="dark" data-theme="vscode">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Clippie — The Intelligent Pocket Clipboard & Snippet Suite</title>
+  <meta name="description" content="A hyper-minimalistic, local-first web utility for developers, system administrators, and digital power users. Sub-50ms offline response times, AST heuristic detection, and multi-IDE themes.">
+  <meta name="theme-color" content="#09090b">
+
+  <!-- Favicon & Brand Icons -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48' fill='none'%3E%3Crect width='48' height='48' rx='12' fill='%2318181b' stroke='%2327272a' stroke-width='1.5'/%3E%3Cpath d='M16 22L11 27L16 32' stroke='%233b82f6' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M32 22L37 27L32 32' stroke='%233b82f6' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M20 15C20 12.7909 21.7909 11 24 11C26.2091 11 28 12.7909 28 15V31C28 34.3137 25.3137 37 22 37C18.6863 37 16 34.3137 16 31V18C16 16.8954 16.8954 16 18 16C19.1046 16 20 16.8954 20 18V30' stroke='%2310b981' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+
+  <!-- Typography & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            'canvas': 'var(--color-canvas)',
+            'surface-lowest': 'var(--color-surface-lowest)',
+            'surface-card': 'var(--color-surface-card)',
+            'surface-low': 'var(--color-surface-low)',
+            'surface-container': 'var(--color-surface-container)',
+            'surface-high': 'var(--color-surface-high)',
+            'surface-highest': 'var(--color-surface-highest)',
+            'border-subtle': 'var(--color-border-subtle)',
+            'border-hover': 'var(--color-border-hover)',
+            'border-focus': 'var(--color-border-focus)',
+            'primary': 'var(--color-primary)',
+            'primary-container': 'var(--color-primary-container)',
+            'primary-text': 'var(--color-primary-text)',
+            'secondary': 'var(--color-secondary)',
+            'secondary-container': 'var(--color-secondary-container)',
+            'secondary-text': 'var(--color-secondary-text)',
+            'text-primary': 'var(--color-text-primary)',
+            'text-secondary': 'var(--color-text-secondary)',
+            'text-muted': 'var(--color-text-muted)',
+            'syntax-keyword': 'var(--syntax-keyword)',
+            'syntax-string': 'var(--syntax-string)',
+            'syntax-func': 'var(--syntax-func)',
+            'syntax-variable': 'var(--syntax-variable)',
+            'syntax-comment': 'var(--syntax-comment)',
+            'syntax-number': 'var(--syntax-number)',
+            'syntax-type': 'var(--syntax-type)',
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'Consolas', 'monospace'],
+          }
+        }
+      }
+    };
+  </script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-canvas text-text-primary min-h-screen selection:bg-primary selection:text-white flex flex-col font-sans">
+
+  <!-- Mobile Sidebar Backdrop Overlay -->
+  <div id="sidebarBackdrop" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 hidden lg:hidden transition-opacity duration-300"></div>
+
+  <!-- Main Sidebar -->
+  <aside id="mainSidebar" class="sidebar-drawer fixed left-0 top-0 h-full w-64 bg-surface-lowest border-r border-border-subtle flex flex-col z-50 select-none -translate-x-full lg:translate-x-0 shadow-2xl lg:shadow-none">
+    <!-- Brand Banner -->
+    <div class="h-16 px-4 border-b border-border-subtle flex items-center justify-between">
+      <div class="flex items-center gap-2.5">
+        <!-- SVG Clippie Logo from Stitch screen -->
+        <svg class="w-8 h-8 shrink-0" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="48" height="48" rx="12" fill="#18181b" stroke="#27272a" stroke-width="1.5"/>
+          <path d="M16 22L11 27L16 32" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M32 22L37 27L32 32" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M20 15C20 12.7909 21.7909 11 24 11C26.2091 11 28 12.7909 28 15V31C28 34.3137 25.3137 37 22 37C18.6863 37 16 34.3137 16 31V18C16 16.8954 16.8954 16 18 16C19.1046 16 20 16.8954 20 18V30" stroke="#10b981" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <div class="flex flex-col">
+          <div class="flex items-center gap-1.5">
+            <span class="font-semibold text-text-primary text-[15px] tracking-tight">Clippie</span>
+            <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-surface-container text-secondary font-medium">v2.0</span>
+          </div>
+          <span class="text-[11px] font-mono text-text-muted">Pocket Snippet Suite</span>
+        </div>
+      </div>
+      <!-- Mobile Close Button -->
+      <button id="closeSidebarBtn" class="lg:hidden p-1.5 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-container transition-colors" type="button" aria-label="Close Sidebar">
+        <span class="material-symbols-outlined text-[20px]">close</span>
+      </button>
+    </div>
+
+    <!-- Navigation Section -->
+    <div class="px-4 pt-4 pb-2">
+      <div class="font-mono text-[10px] text-text-muted uppercase tracking-wider">Workspaces</div>
+    </div>
+
+    <nav class="flex-1 px-3 space-y-1 overflow-y-auto" id="navWorkspaces">
+      <button class="nav-tab active w-full flex items-center justify-between px-3 py-2 rounded-lg text-[13px] font-medium transition-all" data-view="all-snippets" type="button">
+        <div class="flex items-center gap-3">
+          <span class="material-symbols-outlined text-[18px]">code_blocks</span>
+          <span>All Snippets</span>
+        </div>
+        <span id="navCountAll" class="font-mono text-[11px] px-1.5 py-0.5 rounded bg-surface-container text-text-secondary">0</span>
+      </button>
+
+      <button class="nav-tab w-full flex items-center justify-between px-3 py-2 rounded-lg text-[13px] font-medium text-text-secondary hover:bg-surface-container hover:text-text-primary transition-all" data-view="starred-vault" type="button">
+        <div class="flex items-center gap-3">
+          <span class="material-symbols-outlined text-[18px] text-amber-400">star</span>
+          <span>Starred Vault</span>
+        </div>
+        <span id="navCountStarred" class="font-mono text-[11px] px-1.5 py-0.5 rounded bg-surface-container text-amber-400">0</span>
+      </button>
+
+      <button class="nav-tab w-full flex items-center justify-between px-3 py-2 rounded-lg text-[13px] font-medium text-text-secondary hover:bg-surface-container hover:text-text-primary transition-all" data-view="clipboard-history" type="button">
+        <div class="flex items-center gap-3">
+          <span class="material-symbols-outlined text-[18px] text-cyan-400">history</span>
+          <span>Clipboard History</span>
+        </div>
+        <span id="navCountHistory" class="font-mono text-[11px] px-1.5 py-0.5 rounded bg-surface-container text-cyan-400">0</span>
+      </button>
+
+      <button class="nav-tab w-full flex items-center justify-between px-3 py-2 rounded-lg text-[13px] font-medium text-text-secondary hover:bg-surface-container hover:text-text-primary transition-all" data-view="gist-sync" type="button">
+        <div class="flex items-center gap-3">
+          <span class="material-symbols-outlined text-[18px] text-emerald-400">sync_saved_locally</span>
+          <span>Gist Sync</span>
+        </div>
+        <span class="w-2 h-2 rounded-full bg-secondary animate-pulse" title="Sync live"></span>
+      </button>
+
+      <button class="nav-tab w-full flex items-center justify-between px-3 py-2 rounded-lg text-[13px] font-medium text-text-secondary hover:bg-surface-container hover:text-text-primary transition-all" data-view="settings" type="button">
+        <div class="flex items-center gap-3">
+          <span class="material-symbols-outlined text-[18px]">tune</span>
+          <span>Preferences</span>
+        </div>
+      </button>
+    </nav>
+
+    <!-- Sidebar Footer: Storage Usage & Shortcuts -->
+    <div class="p-3 border-t border-border-subtle bg-surface-lowest space-y-3">
+      <div class="p-2.5 bg-surface-low rounded-lg border border-border-subtle">
+        <div class="flex items-center justify-between text-[11px] font-mono text-text-muted mb-1.5">
+          <span>Storage Quota</span>
+          <span id="sidebarStorageText" class="text-text-primary font-medium">0 KB / 5 MB</span>
+        </div>
+        <div class="w-full bg-surface-highest h-1.5 rounded-full overflow-hidden">
+          <div id="sidebarStorageBar" class="bg-secondary h-full transition-all duration-300" style="width: 2%;"></div>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between text-[10px] font-mono text-text-muted px-1">
+        <span class="flex items-center gap-1 cursor-pointer hover:text-text-primary" onclick="openShortcutsModal()">
+          <kbd class="px-1 py-0.2 rounded bg-surface-card border border-border-subtle text-text-secondary">?</kbd> Shortcuts
+        </span>
+        <span class="flex items-center gap-1">
+          <span class="w-1.5 h-1.5 rounded-full bg-secondary"></span> Offline Ready
+        </span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Viewport Container (Offset for lg:pl-64) -->
+  <div class="lg:pl-64 flex flex-col min-h-screen w-full">
+    
+    <!-- Persistent Top Bar Header -->
+    <header class="sticky top-0 z-30 bg-surface-lowest/90 backdrop-blur-xl border-b border-border-subtle">
+      <div class="h-16 px-4 lg:px-6 flex items-center justify-between gap-3">
+        
+        <!-- Left: Mobile Menu Toggle & Workspace Indicator -->
+        <div class="flex items-center gap-3">
+          <button id="openSidebarBtn" class="lg:hidden p-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-container transition-colors" type="button" aria-label="Open Navigation">
+            <span class="material-symbols-outlined text-[22px]">menu</span>
+          </button>
+          
+          <div class="hidden sm:flex items-center gap-2">
+            <span id="activeWorkspacePill" class="px-2.5 py-1 rounded bg-surface-container font-mono text-[11px] text-text-secondary flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-[14px] text-primary">terminal</span>
+              <span id="activeWorkspaceLabel">All Snippets</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- Center: Global Real-Time Search Bar -->
+        <div class="flex-1 max-w-xl mx-2">
+          <div class="relative flex items-center w-full group">
+            <span class="material-symbols-outlined absolute left-3 text-text-muted text-[18px] pointer-events-none group-focus-within:text-primary transition-colors">search</span>
+            <input id="globalSearchInput" type="text" placeholder="Search snippets, tags, code... (Press / or ⌘K)" class="w-full pl-9 pr-14 py-2 bg-surface-card rounded-lg text-[13px] text-text-primary placeholder:text-text-muted border border-border-subtle focus:border-border-focus focus:outline-none transition-all">
+            <div class="absolute right-2.5 flex items-center gap-1">
+              <button id="clearSearchBtn" class="hidden p-0.5 text-text-muted hover:text-text-primary rounded" type="button" title="Clear Search">
+                <span class="material-symbols-outlined text-[16px]">cancel</span>
+              </button>
+              <kbd class="hidden sm:inline-block px-1.5 py-0.5 rounded bg-surface-container border border-border-subtle text-text-muted font-mono text-[10px]">⌘K</kbd>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Action Buttons & Session Badge -->
+        <div class="flex items-center gap-2">
+          <!-- Theme Picker Dropdown -->
+          <div class="relative">
+            <button id="themePickerBtn" class="interactive-btn flex items-center gap-1.5 px-2.5 py-1.5 bg-surface-card hover:bg-surface-container text-text-secondary hover:text-text-primary rounded-lg border border-border-subtle font-mono text-[11px]" type="button" title="Switch IDE Theme">
+              <span class="material-symbols-outlined text-[16px]">palette</span>
+              <span id="themePickerLabel" class="hidden md:inline">VS Code</span>
+              <span class="material-symbols-outlined text-[14px]">expand_more</span>
+            </button>
+            <!-- Dropdown Menu -->
+            <div id="themeDropdownMenu" class="hidden absolute right-0 mt-1 w-44 bg-surface-card rounded-lg border border-border-subtle shadow-2xl p-1 z-50 font-mono text-[12px]">
+              <button class="theme-opt w-full text-left px-3 py-1.5 rounded hover:bg-surface-container flex items-center justify-between" data-theme="vscode" type="button">
+                <span>VS Code Dark+</span>
+                <span class="check-icon material-symbols-outlined text-[14px] text-primary">check</span>
+              </button>
+              <button class="theme-opt w-full text-left px-3 py-1.5 rounded hover:bg-surface-container flex items-center justify-between" data-theme="monokai" type="button">
+                <span>Monokai Pro</span>
+                <span class="check-icon hidden material-symbols-outlined text-[14px] text-primary">check</span>
+              </button>
+              <button class="theme-opt w-full text-left px-3 py-1.5 rounded hover:bg-surface-container flex items-center justify-between" data-theme="github" type="button">
+                <span>GitHub Clean</span>
+                <span class="check-icon hidden material-symbols-outlined text-[14px] text-primary">check</span>
+              </button>
+              <button class="theme-opt w-full text-left px-3 py-1.5 rounded hover:bg-surface-container flex items-center justify-between" data-theme="solarized" type="button">
+                <span>Solarized Dark</span>
+                <span class="check-icon hidden material-symbols-outlined text-[14px] text-primary">check</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Backup / JSON Tools (Desktop) -->
+          <button id="exportJsonBtn" class="interactive-btn hidden sm:flex items-center gap-1 px-2.5 py-1.5 bg-surface-card hover:bg-surface-container text-text-secondary hover:text-text-primary rounded-lg border border-border-subtle font-mono text-[11px]" title="Export Vault JSON" type="button">
+            <span class="material-symbols-outlined text-[16px]">file_download</span>
+            <span class="hidden md:inline">Export</span>
+          </button>
+          <input type="file" id="importJsonInput" accept=".json" class="hidden">
+          <button id="importJsonBtn" class="interactive-btn hidden sm:flex items-center gap-1 px-2.5 py-1.5 bg-surface-card hover:bg-surface-container text-text-secondary hover:text-text-primary rounded-lg border border-border-subtle font-mono text-[11px]" title="Import JSON Backup" type="button">
+            <span class="material-symbols-outlined text-[16px]">file_upload</span>
+            <span class="hidden md:inline">Import</span>
+          </button>
+
+          <!-- Primary + New Snippet CTA -->
+          <button id="openNewSnippetBtn" class="interactive-btn flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white hover:bg-blue-600 rounded-lg font-mono text-[12px] font-semibold shadow-sm shadow-blue-500/20 active:scale-95 transition-all" type="button">
+            <span class="material-symbols-outlined text-[16px]">add</span>
+            <span class="hidden sm:inline">New Snippet</span>
+            <kbd class="hidden sm:inline-block px-1 py-0.2 rounded bg-white/20 text-[10px]">N</kbd>
+          </button>
+
+          <!-- Terminal Session Badge -->
+          <div class="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface-low border border-border-subtle font-mono text-[11px] text-text-secondary" title="Local session active">
+            <span class="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse"></span>
+            <span class="text-syntax-func">λ</span>
+            <span class="text-text-primary">alex</span>
+            <span class="text-syntax-comment">:</span>
+            <span class="text-syntax-variable">main*</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Subheader Filter Matrix Bar (Only visible in All Snippets & Starred Vault) -->
+      <div id="filterMatrixBar" class="h-12 px-4 lg:px-6 bg-surface-lowest/75 backdrop-blur-md border-t border-border-subtle flex items-center justify-between gap-4 overflow-x-auto text-[12px]">
+        
+        <!-- Language Filter Pills -->
+        <div class="flex items-center gap-1.5 shrink-0" id="langPillContainer">
+          <span class="font-mono text-[11px] text-text-muted mr-1">Lang:</span>
+          <button class="lang-pill active px-2.5 py-0.5 rounded bg-primary-container text-primary-text font-mono text-[11px] font-medium border border-primary/30" data-lang="all" type="button">All</button>
+          <button class="lang-pill px-2.5 py-0.5 rounded bg-surface-card hover:bg-surface-container text-text-secondary font-mono text-[11px] border border-border-subtle transition-colors" data-lang="bash" type="button">Bash</button>
+          <button class="lang-pill px-2.5 py-0.5 rounded bg-surface-card hover:bg-surface-container text-text-secondary font-mono text-[11px] border border-border-subtle transition-colors" data-lang="python" type="button">Python</button>
+          <button class="lang-pill px-2.5 py-0.5 rounded bg-surface-card hover:bg-surface-container text-text-secondary font-mono text-[11px] border border-border-subtle transition-colors" data-lang="json" type="button">JSON</button>
+          <button class="lang-pill px-2.5 py-0.5 rounded bg-surface-card hover:bg-surface-container text-text-secondary font-mono text-[11px] border border-border-subtle transition-colors" data-lang="yaml" type="button">YAML</button>
+          <button class="lang-pill px-2.5 py-0.5 rounded bg-surface-card hover:bg-surface-container text-text-secondary font-mono text-[11px] border border-border-subtle transition-colors" data-lang="sql" type="button">SQL</button>
+          <button class="lang-pill px-2.5 py-0.5 rounded bg-surface-card hover:bg-surface-container text-text-secondary font-mono text-[11px] border border-border-subtle transition-colors" data-lang="markdown" type="button">Markdown</button>
+          <button class="lang-pill px-2.5 py-0.5 rounded bg-surface-card hover:bg-surface-container text-text-secondary font-mono text-[11px] border border-border-subtle transition-colors" data-lang="rust" type="button">Rust</button>
+          <button class="lang-pill px-2.5 py-0.5 rounded bg-surface-card hover:bg-surface-container text-text-secondary font-mono text-[11px] border border-border-subtle transition-colors" data-lang="typescript" type="button">TypeScript</button>
+        </div>
+
+        <!-- Custom Tag Chips -->
+        <div class="hidden md:flex items-center gap-1.5 shrink-0 overflow-x-auto" id="tagChipContainer">
+          <span class="font-mono text-[11px] text-text-muted mr-1">Tags:</span>
+          <button class="tag-chip px-2 py-0.5 rounded-full bg-surface-card hover:bg-surface-container text-text-muted font-mono text-[11px] border border-border-subtle transition-colors" data-tag="#devops" type="button">#devops</button>
+          <button class="tag-chip px-2 py-0.5 rounded-full bg-surface-card hover:bg-surface-container text-text-muted font-mono text-[11px] border border-border-subtle transition-colors" data-tag="#auth" type="button">#auth</button>
+          <button class="tag-chip px-2 py-0.5 rounded-full bg-surface-card hover:bg-surface-container text-text-muted font-mono text-[11px] border border-border-subtle transition-colors" data-tag="#ai-prompts" type="button">#ai-prompts</button>
+          <button class="tag-chip px-2 py-0.5 rounded-full bg-surface-card hover:bg-surface-container text-text-muted font-mono text-[11px] border border-border-subtle transition-colors" data-tag="#frontend" type="button">#frontend</button>
+          <button class="tag-chip px-2 py-0.5 rounded-full bg-surface-card hover:bg-surface-container text-text-muted font-mono text-[11px] border border-border-subtle transition-colors" data-tag="#database" type="button">#database</button>
+          <button class="tag-chip px-2 py-0.5 rounded-full bg-surface-card hover:bg-surface-container text-text-muted font-mono text-[11px] border border-border-subtle transition-colors" data-tag="#security" type="button">#security</button>
+        </div>
+
+        <!-- Editor View Toggles (Soft-Wrap, Line Numbers) -->
+        <div class="flex items-center gap-3 shrink-0">
+          <label class="flex items-center gap-1.5 cursor-pointer text-text-secondary hover:text-text-primary font-mono text-[11px] select-none">
+            <input id="toggleSoftWrap" type="checkbox" checked class="accent-primary rounded">
+            <span>Soft-wrap</span>
+          </label>
+          <label class="flex items-center gap-1.5 cursor-pointer text-text-secondary hover:text-text-primary font-mono text-[11px] select-none">
+            <input id="toggleLineNumbers" type="checkbox" checked class="accent-primary rounded">
+            <span>Numbers</span>
+          </label>
+        </div>
+      </div>
+    </header>
+
+    <!-- Dynamic Main Content Area -->
+    <main class="flex-1 w-full p-4 lg:p-6 max-w-[1600px] mx-auto pb-24 lg:pb-12">
+      
+      <!-- VIEW 1: ALL SNIPPETS DASHBOARD -->
+      <section id="view-all-snippets" class="workspace-view flex flex-col space-y-4">
+        
+        <!-- Top Stats & Mode Switcher Strip -->
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 rounded-xl bg-surface-card border border-border-subtle shadow-sm">
+          <div class="flex items-center gap-3 flex-wrap font-mono text-[12px]">
+            <div class="flex items-center gap-1.5 px-2 py-0.5 rounded bg-surface-container text-secondary">
+              <span class="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
+              <span class="font-semibold">ENGINE READY</span>
+            </div>
+            <div class="text-text-secondary">
+              <span id="statsTotalCount" class="text-text-primary font-semibold">0</span> Snippets Stored
+              <span class="text-text-muted">•</span>
+              <span id="statsSizeKb" class="text-text-muted">0 KB</span> Local
+              <span class="text-text-muted">•</span>
+              <span class="text-syntax-string">0 Conflicts</span>
+            </div>
+          </div>
+
+          <!-- Right Grid / Compact View Switcher -->
+          <div class="flex items-center gap-2 self-stretch sm:self-auto justify-between sm:justify-end">
+            <div class="flex items-center gap-1 bg-surface-lowest p-0.5 rounded-lg border border-border-subtle">
+              <button id="viewGridBtn" class="px-2.5 py-1 rounded bg-surface-card text-primary font-mono text-[11px] flex items-center gap-1 shadow-sm transition-all" type="button" title="Masonry Grid View">
+                <span class="material-symbols-outlined text-[15px]">grid_view</span>
+                <span>Masonry</span>
+              </button>
+              <button id="viewCompactBtn" class="px-2.5 py-1 rounded text-text-muted hover:text-text-primary font-mono text-[11px] flex items-center gap-1 transition-all" type="button" title="Compact List View">
+                <span class="material-symbols-outlined text-[15px]">view_headline</span>
+                <span>Compact</span>
+              </button>
+            </div>
+            
+            <button class="interactive-btn flex items-center gap-1 px-2.5 py-1 rounded bg-surface-container hover:bg-surface-high text-text-primary font-mono text-[11px] border border-border-subtle transition-colors" onclick="exportDataBackup()" type="button" title="Quick backup">
+              <span class="material-symbols-outlined text-[15px] text-text-secondary">cloud_download</span>
+              <span class="hidden md:inline">Backup</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Telemetry & Scratchpad Memo Banner -->
+        <div class="flex items-center justify-between px-3 py-2 rounded-lg bg-surface-card/60 text-syntax-comment font-mono text-[11px] border border-border-subtle">
+          <div class="flex items-center gap-1.5 truncate">
+            <span class="text-syntax-keyword font-semibold">//</span>
+            <span class="text-text-secondary">memo:</span>
+            <span class="truncate">scratchpad synced to local v2 cache · sub-50ms query evaluation</span>
+          </div>
+          <div class="hidden sm:flex items-center gap-2 text-text-muted">
+            <span>eval-mode: read-write</span>
+            <span>•</span>
+            <span class="text-secondary font-medium">AST Live</span>
+          </div>
+        </div>
+
+        <!-- Active Filter Indicator (if filtered) -->
+        <div id="activeFilterBanner" class="hidden flex items-center justify-between px-3 py-1.5 rounded-lg bg-primary-container border border-primary/30 text-primary-text font-mono text-[11px]">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-[16px]">filter_alt</span>
+            <span id="activeFilterDescription">Filtered</span>
+          </div>
+          <button onclick="resetFilters()" class="text-[11px] underline hover:text-white" type="button">Clear Filters</button>
+        </div>
+
+        <!-- The Responsive Snippets Grid -->
+        <div id="snippetGridContainer" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 items-start">
+          <!-- Snippet Cards will be dynamically injected here via app.js -->
+        </div>
+
+        <!-- Empty State View (Shown when 0 cards match) -->
+        <div id="emptyStateView" class="hidden flex flex-col items-center justify-center p-12 bg-surface-card rounded-xl border border-dashed border-border-subtle text-center space-y-4">
+          <div class="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center text-text-muted">
+            <span class="material-symbols-outlined text-[24px]">code_off</span>
+          </div>
+          <div class="space-y-1">
+            <h3 class="font-semibold text-text-primary text-[16px]">No matching snippets found</h3>
+            <p class="text-text-secondary text-[13px] max-w-md">Try clearing the search query, selecting "All" languages, or capturing a new snippet.</p>
+          </div>
+          <div class="flex items-center gap-2 pt-2">
+            <button onclick="resetFilters()" class="px-3 py-1.5 rounded bg-surface-container hover:bg-surface-high font-mono text-[12px] text-text-primary transition-colors" type="button">Reset Filters</button>
+            <button onclick="openModal()" class="px-3 py-1.5 rounded bg-primary text-white hover:bg-blue-600 font-mono text-[12px] font-medium transition-colors" type="button">+ Create Snippet</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW 2: STARRED VAULT -->
+      <section id="view-starred-vault" class="workspace-view hidden flex flex-col space-y-4">
+        <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 p-4 rounded-xl bg-surface-card border border-border-subtle">
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <span class="material-symbols-outlined text-amber-400 text-[20px]" style="font-variation-settings: 'FILL' 1;">star</span>
+              <h1 class="text-[20px] font-bold text-text-primary tracking-tight">Starred Vault</h1>
+              <span class="px-2 py-0.5 rounded bg-surface-container text-secondary font-mono text-[10px] font-semibold">E2EE ACTIVE</span>
+            </div>
+            <p class="text-text-secondary text-[13px]">Curated, high-frequency code blocks, environment templates, and mission-critical scripts.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="pinCurrentClipboard()" class="interactive-btn px-3 py-1.5 rounded-lg bg-surface-container hover:bg-surface-high border border-border-subtle font-mono text-[12px] text-text-primary flex items-center gap-1.5 shadow-sm" type="button">
+              <span class="material-symbols-outlined text-[16px] text-amber-400">push_pin</span>
+              <span>Pin Clipboard</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Starred Quick Filter Row -->
+        <div class="flex items-center gap-2 overflow-x-auto pb-1" id="vaultCategoryFilterContainer">
+          <button class="vault-cat-btn active px-3 py-1 rounded bg-surface-container text-primary font-mono text-[11px] font-medium" data-cat="all" type="button">All Starred</button>
+          <button class="vault-cat-btn px-3 py-1 rounded bg-surface-card hover:bg-surface-container text-text-secondary font-mono text-[11px]" data-cat="prod" type="button">Production Configs</button>
+          <button class="vault-cat-btn px-3 py-1 rounded bg-surface-card hover:bg-surface-container text-text-secondary font-mono text-[11px]" data-cat="auth" type="button">Auth & Security</button>
+          <button class="vault-cat-btn px-3 py-1 rounded bg-surface-card hover:bg-surface-container text-text-secondary font-mono text-[11px]" data-cat="database" type="button">Database Queries</button>
+        </div>
+
+        <!-- Vault Cards Grid -->
+        <div id="vaultGridContainer" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 items-start">
+          <!-- Injected via app.js -->
+        </div>
+      </section>
+
+      <!-- VIEW 3: CLIPBOARD HISTORY (RING BUFFER) -->
+      <section id="view-clipboard-history" class="workspace-view hidden flex flex-col space-y-4">
+        <!-- Top Status Banner -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-xl bg-surface-card border border-border-subtle">
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <span class="inline-flex items-center gap-1.5 bg-surface-container px-2.5 py-0.5 rounded-full text-secondary font-mono text-[10px] font-semibold">
+                <span class="w-1.5 h-1.5 rounded-full bg-secondary animate-ping"></span>
+                RING BUFFER MONITOR ONLINE
+              </span>
+              <span class="text-text-muted font-mono text-[11px]">/dev/clipboard/ring-0</span>
+            </div>
+            <h1 class="text-[20px] font-bold text-text-primary tracking-tight">Clipboard History</h1>
+            <p class="text-text-secondary text-[13px]">Local-first ring buffer capturing clipboard items in real-time. Click to inspect, copy, or promote to persistent vault.</p>
+          </div>
+          <!-- Controls -->
+          <div class="flex items-center gap-2 flex-wrap">
+            <button id="toggleMonitorBtn" class="interactive-btn px-3 py-1.5 rounded-lg bg-surface-container hover:bg-surface-high border border-border-subtle font-mono text-[12px] text-text-secondary hover:text-text-primary flex items-center gap-1.5 transition-colors" type="button">
+              <span id="monitorIcon" class="material-symbols-outlined text-[16px] text-secondary">pause</span>
+              <span id="monitorLabel">Pause Capture</span>
+            </button>
+            <button id="clearHistoryBtn" class="interactive-btn px-3 py-1.5 rounded-lg bg-surface-container hover:bg-red-500/20 text-text-muted hover:text-red-400 font-mono text-[12px] flex items-center gap-1.5 transition-colors" type="button">
+              <span class="material-symbols-outlined text-[16px]">delete_sweep</span>
+              <span>Clear Buffer</span>
+            </button>
+            <button id="simulateCaptureBtn" class="interactive-btn px-3 py-1.5 rounded-lg bg-primary-container text-primary-text hover:bg-primary hover:text-white font-mono text-[12px] flex items-center gap-1.5 transition-all" type="button" title="Simulate copying new text to test ring buffer">
+              <span class="material-symbols-outlined text-[16px]">content_paste</span>
+              <span>Simulate Copy</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Filter & Search Strip -->
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3 rounded-lg bg-surface-low border border-border-subtle font-mono text-[11px]">
+          <div class="flex items-center gap-2 flex-1">
+            <span class="material-symbols-outlined text-[16px] text-text-muted">search</span>
+            <input id="historySearchInput" type="text" placeholder="Search captured stream..." class="bg-transparent border-none focus:outline-none text-text-primary placeholder:text-text-muted w-full">
+          </div>
+          <div class="flex items-center gap-3 text-text-muted">
+            <span id="historyStatsText">6 cached • 2.4 KB footprint</span>
+            <span>•</span>
+            <span class="text-syntax-string font-medium">Auto-Sanitizing AST</span>
+          </div>
+        </div>
+
+        <!-- 2-Column Split: Buffer List & Detail Inspector -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+          <div class="lg:col-span-5 flex flex-col space-y-2" id="historyTimelineList">
+            <!-- Injected via app.js -->
+          </div>
+
+          <!-- Inspector Panel -->
+          <div class="lg:col-span-7 bg-surface-card rounded-xl border border-border-subtle p-4 flex flex-col space-y-3 sticky top-28" id="historyInspectorPanel">
+            <div class="flex items-center justify-between pb-2 border-b border-border-subtle">
+              <div class="flex items-center gap-2">
+                <span id="inspectBadge" class="px-2 py-0.5 rounded bg-primary-container text-primary-text font-mono text-[11px] font-semibold">Python</span>
+                <span id="inspectTimestamp" class="font-mono text-[11px] text-text-muted">12s ago</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <button id="inspectPromoteBtn" class="interactive-btn px-2.5 py-1 rounded bg-secondary-container text-secondary-text hover:bg-secondary hover:text-white font-mono text-[11px] flex items-center gap-1 font-medium transition-all" type="button">
+                  <span class="material-symbols-outlined text-[14px]">add_circle</span>
+                  <span>Promote to Vault</span>
+                </button>
+                <button id="inspectCopyBtn" class="interactive-btn px-2.5 py-1 rounded bg-surface-container hover:bg-surface-high font-mono text-[11px] text-text-primary flex items-center gap-1 transition-colors" type="button">
+                  <span class="material-symbols-outlined text-[14px]">content_copy</span>
+                  <span>Copy</span>
+                </button>
+              </div>
+            </div>
+            <pre class="code-viewport p-3 overflow-x-auto text-[12px] font-mono text-text-primary leading-relaxed max-h-[400px] border border-border-subtle rounded"><code id="inspectCodeBody">Select a clipboard item to inspect syntax structure.</code></pre>
+            <div class="flex items-center justify-between text-text-muted font-mono text-[11px]">
+              <span id="inspectMeta">0 bytes • Plain String</span>
+              <span>SHA-256 Checksum Verified</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW 4: GIST SYNC -->
+      <section id="view-gist-sync" class="workspace-view hidden flex flex-col space-y-4">
+        <!-- Top Workspace Context -->
+        <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 p-4 rounded-xl bg-surface-card border border-border-subtle">
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <span class="font-mono text-[11px] text-syntax-variable tracking-widest uppercase">WORKSPACE // CLOUD SYNC</span>
+              <span class="text-text-muted font-mono text-[11px]">/</span>
+              <span class="px-1.5 py-0.2 rounded bg-surface-container font-mono text-[10px] text-text-secondary">v2.0.0-core</span>
+            </div>
+            <h1 class="text-[20px] font-bold text-text-primary tracking-tight">Gist Sync</h1>
+            <p class="text-text-secondary text-[13px]">Bi-directional synchronization between Clippie local repository and GitHub Gists.</p>
+          </div>
+          <!-- Metrics Sparklines -->
+          <div class="flex items-center gap-3 bg-surface-low px-4 py-2 rounded-lg border border-border-subtle">
+            <div>
+              <span class="font-mono text-[10px] text-text-muted block">API RATE LIMIT</span>
+              <span class="font-mono text-[13px] text-text-primary font-semibold">4,982 / 5,000</span>
+            </div>
+            <div class="h-6 w-px bg-border-subtle"></div>
+            <div>
+              <span class="font-mono text-[10px] text-text-muted block">CACHE HIT ETAG</span>
+              <span class="font-mono text-[13px] text-secondary font-semibold">99.4% Active</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sync Status Banner -->
+        <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 p-4 bg-surface-card rounded-xl border border-border-subtle shadow-md">
+          <div class="flex items-center gap-3">
+            <div class="w-2.5 h-2.5 rounded-full bg-secondary shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse"></div>
+            <div class="flex flex-col sm:flex-row sm:items-center gap-2 font-mono text-[12px]">
+              <span class="text-text-primary font-medium">GitHub Remote:</span>
+              <span class="text-syntax-func font-semibold hover:underline cursor-pointer">github.com/developer/clippie-vault</span>
+              <span class="px-1.5 py-0.2 rounded bg-surface-container text-secondary text-[10px]">Connected</span>
+            </div>
+          </div>
+          <div class="flex items-center gap-3 font-mono text-[11px] text-text-muted">
+            <span id="gistLastSyncedText">Last Synced: Just now</span>
+            <span>•</span>
+            <span>Revision: <strong id="gistRevHash" class="text-syntax-variable font-normal">#d4a9f1c</strong></span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="manualSyncBtn" class="interactive-btn px-3 py-1.5 rounded-lg bg-surface-container hover:bg-surface-high text-text-primary font-mono text-[12px] flex items-center gap-1.5 border border-border-subtle" type="button">
+              <span id="syncSpinIcon" class="material-symbols-outlined text-[16px] text-primary">sync</span>
+              <span>Sync Now</span>
+              <kbd class="px-1 py-0.2 bg-surface-lowest text-[10px] text-text-muted rounded">⌘S</kbd>
+            </button>
+          </div>
+        </div>
+
+        <!-- Terminal Log Strip -->
+        <div class="flex items-center justify-between px-3 py-2 bg-surface-lowest rounded-lg border border-border-subtle font-mono text-[11px]">
+          <div class="flex items-center gap-2 overflow-hidden truncate">
+            <span class="text-syntax-func">system.log &gt;</span>
+            <span class="text-syntax-comment truncate">// memo: Personal Access Token (PAT) held in secure session memory. ETag conditional requests prevent API quota exhaustion.</span>
+          </div>
+          <div class="hidden sm:flex items-center gap-2 text-text-muted shrink-0 pl-2">
+            <span>PID: 84192</span>
+            <span>•</span>
+            <span class="text-secondary">Webhook 200 OK</span>
+          </div>
+        </div>
+
+        <!-- Synced Gists List -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="gistCardsContainer">
+          <!-- Dynamically populated via app.js -->
+        </div>
+      </section>
+
+      <!-- VIEW 5: PREFERENCES & IDE PROFILES -->
+      <section id="view-settings" class="workspace-view hidden flex flex-col space-y-6">
+        <div>
+          <div class="flex items-center gap-2 mb-1">
+            <span class="font-mono text-[11px] text-secondary tracking-widest uppercase">System Preferences</span>
+            <span class="text-text-muted">•</span>
+            <span class="font-mono text-[11px] text-text-muted">v2.0.0-local</span>
+          </div>
+          <h1 class="text-[22px] font-bold text-text-primary tracking-tight">IDE Profiles & Engine Suite</h1>
+          <p class="text-text-secondary text-[13px]">Configure code syntaxes, local memory persistence, heuristics, and developer ergonomics.</p>
+        </div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+          
+          <!-- Left Column (7 cols): IDE Themes & Rendering -->
+          <div class="xl:col-span-7 flex flex-col space-y-6">
+            
+            <!-- Theme Selection Matrix -->
+            <section class="bg-surface-card rounded-xl p-5 border border-border-subtle shadow-sm space-y-4">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span class="material-symbols-outlined text-primary text-[20px]">palette</span>
+                  <h2 class="text-[16px] font-semibold text-text-primary">IDE Theme & Syntax Token Scheme</h2>
+                </div>
+                <span class="px-2 py-0.5 rounded bg-primary-container text-primary-text font-mono text-[10px]">Live Profile</span>
+              </div>
+              <p class="text-text-secondary text-[13px]">Select your preferred development environment token scheme. Applies instantly to all code cards and modals.</p>
+              
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                <!-- Theme Card: VS Code Dark+ -->
+                <div class="theme-card-option cursor-pointer rounded-xl p-3.5 bg-surface-low border border-border-subtle hover:border-primary/50 transition-all group" data-theme-val="vscode">
+                  <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-2">
+                      <span class="theme-dot w-2.5 h-2.5 rounded-full bg-primary"></span>
+                      <span class="font-semibold text-[13px] text-text-primary">VS Code Dark+</span>
+                    </div>
+                    <span class="theme-status font-mono text-[11px] text-primary">Active</span>
+                  </div>
+                  <div class="rounded-lg p-2.5 bg-[#0e0e11] font-mono text-[11px] leading-relaxed space-y-0.5 border border-border-subtle">
+                    <div><span class="text-syntax-keyword">const</span> <span class="text-syntax-variable">snippet</span> = <span class="text-syntax-func">createHook</span>();</div>
+                    <div><span class="text-syntax-func">clippie</span>.<span class="text-syntax-variable">persist</span>(<span class="text-syntax-string">'#vault'</span>);</div>
+                    <div class="text-syntax-comment">// fast & zero-latency</div>
+                  </div>
+                </div>
+
+                <!-- Theme Card: Monokai Pro -->
+                <div class="theme-card-option cursor-pointer rounded-xl p-3.5 bg-surface-low border border-border-subtle hover:border-primary/50 transition-all group" data-theme-val="monokai">
+                  <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-2">
+                      <span class="theme-dot w-2.5 h-2.5 rounded-full bg-surface-highest"></span>
+                      <span class="font-semibold text-[13px] text-text-primary">Monokai Pro</span>
+                    </div>
+                    <span class="theme-status font-mono text-[11px] text-text-muted">Select</span>
+                  </div>
+                  <div class="rounded-lg p-2.5 bg-[#141413] font-mono text-[11px] leading-relaxed space-y-0.5 border border-border-subtle">
+                    <div><span class="text-[#ff6188]">const</span> <span class="text-[#a9dc76]">snippet</span> = <span class="text-[#78dce8]">createHook</span>();</div>
+                    <div><span class="text-[#a9dc76]">clippie</span>.<span class="text-[#fc9867]">persist</span>(<span class="text-[#ffd866]">'#vault'</span>);</div>
+                    <div class="text-[#727072]">// fast & zero-latency</div>
+                  </div>
+                </div>
+
+                <!-- Theme Card: GitHub Clean -->
+                <div class="theme-card-option cursor-pointer rounded-xl p-3.5 bg-surface-low border border-border-subtle hover:border-primary/50 transition-all group" data-theme-val="github">
+                  <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-2">
+                      <span class="theme-dot w-2.5 h-2.5 rounded-full bg-surface-highest"></span>
+                      <span class="font-semibold text-[13px] text-text-primary">GitHub Clean</span>
+                    </div>
+                    <span class="theme-status font-mono text-[11px] text-text-muted">Select</span>
+                  </div>
+                  <div class="rounded-lg p-2.5 bg-[#010409] font-mono text-[11px] leading-relaxed space-y-0.5 border border-border-subtle">
+                    <div><span class="text-[#ff7b72]">const</span> <span class="text-[#79c0ff]">snippet</span> = <span class="text-[#d2a8ff]">createHook</span>();</div>
+                    <div><span class="text-[#79c0ff]">clippie</span>.<span class="text-[#ffa657]">persist</span>(<span class="text-[#a5d6ff]">'#vault'</span>);</div>
+                    <div class="text-[#8b949e]">// fast & zero-latency</div>
+                  </div>
+                </div>
+
+                <!-- Theme Card: Solarized Dark -->
+                <div class="theme-card-option cursor-pointer rounded-xl p-3.5 bg-surface-low border border-border-subtle hover:border-primary/50 transition-all group" data-theme-val="solarized">
+                  <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-2">
+                      <span class="theme-dot w-2.5 h-2.5 rounded-full bg-surface-highest"></span>
+                      <span class="font-semibold text-[13px] text-text-primary">Solarized Dark</span>
+                    </div>
+                    <span class="theme-status font-mono text-[11px] text-text-muted">Select</span>
+                  </div>
+                  <div class="rounded-lg p-2.5 bg-[#00171f] font-mono text-[11px] leading-relaxed space-y-0.5 border border-border-subtle">
+                    <div><span class="text-[#859900]">const</span> <span class="text-[#268bd2]">snippet</span> = <span class="text-[#b58900]">createHook</span>();</div>
+                    <div><span class="text-[#268bd2]">clippie</span>.<span class="text-[#cb4b16]">persist</span>(<span class="text-[#2aa198]">'#vault'</span>);</div>
+                    <div class="text-[#586e75]">// fast & zero-latency</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Typography & Sizing Controls -->
+              <div class="pt-3 border-t border-border-subtle space-y-3 font-mono text-[12px]">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <span class="text-text-primary block font-medium">Font Sizing Scale</span>
+                    <span class="text-text-muted text-[11px]">Adjust editor code scale</span>
+                  </div>
+                  <div class="flex items-center gap-1 bg-surface-low p-1 rounded-lg border border-border-subtle">
+                    <button class="font-scale-btn px-2 py-0.5 rounded text-text-secondary hover:text-text-primary" data-size="12" type="button">12px</button>
+                    <button class="font-scale-btn active px-2 py-0.5 rounded bg-primary-container text-primary-text font-semibold" data-size="13" type="button">13px</button>
+                    <button class="font-scale-btn px-2 py-0.5 rounded text-text-secondary hover:text-text-primary" data-size="15" type="button">15px</button>
+                  </div>
+                </div>
+
+                <div class="flex items-center justify-between">
+                  <div>
+                    <span class="text-text-primary block font-medium">Programming Ligatures</span>
+                    <span class="text-text-muted text-[11px]">Render `=&gt;`, `===`, `!=` as continuous glyphs</span>
+                  </div>
+                  <input id="prefLigatures" type="checkbox" checked class="accent-primary rounded h-4 w-4">
+                </div>
+              </div>
+            </section>
+
+            <!-- Smart Heuristic Engine Configuration -->
+            <section class="bg-surface-card rounded-xl p-5 border border-border-subtle shadow-sm space-y-4">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span class="material-symbols-outlined text-secondary text-[20px]">psychology</span>
+                  <h2 class="text-[16px] font-semibold text-text-primary">Smart Heuristic Engine</h2>
+                </div>
+                <span class="px-2 py-0.5 rounded bg-surface-container text-secondary font-mono text-[10px]">Client-Side NLP & AST</span>
+              </div>
+              <p class="text-text-secondary text-[13px]">Clippie processes text tokens completely offline within your browser session to categorize code instantly.</p>
+
+              <div class="space-y-3 bg-surface-low p-3.5 rounded-xl border border-border-subtle font-mono text-[12px]">
+                <div class="flex items-center justify-between">
+                  <div class="pr-4">
+                    <span class="text-text-primary block font-medium">Automatic Language Detection on Paste</span>
+                    <span class="text-text-muted text-[11px]">Scans token signatures (shebangs, SQL clauses, JSON structures).</span>
+                  </div>
+                  <input id="prefAutoDetect" type="checkbox" checked class="accent-secondary rounded h-4 w-4 shrink-0">
+                </div>
+                <div class="h-px bg-border-subtle"></div>
+                <div class="flex items-center justify-between">
+                  <div class="pr-4">
+                    <span class="text-text-primary block font-medium">Regex Smart Title & Tag Inference</span>
+                    <span class="text-text-muted text-[11px]">Auto-suggests clean titles (e.g., "Docker Compose Node") from line 1.</span>
+                  </div>
+                  <input id="prefSmartTitle" type="checkbox" checked class="accent-secondary rounded h-4 w-4 shrink-0">
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <!-- Right Column (5 cols): Data & Storage & Shortcuts -->
+          <div class="xl:col-span-5 flex flex-col space-y-6">
+            
+            <!-- Data & LocalStorage Management -->
+            <section class="bg-surface-card rounded-xl p-5 border border-border-subtle shadow-sm space-y-4">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span class="material-symbols-outlined text-amber-400 text-[20px]">database</span>
+                  <h2 class="text-[16px] font-semibold text-text-primary">Data & Storage Management</h2>
+                </div>
+                <span class="font-mono text-[11px] text-text-muted">PRD §5.2</span>
+              </div>
+
+              <!-- Storage Meter -->
+              <div class="bg-surface-low p-3.5 rounded-xl border border-border-subtle space-y-2">
+                <div class="flex items-center justify-between font-mono text-[11px]">
+                  <span class="text-text-secondary">Browser LocalStorage Quota</span>
+                  <span id="prefQuotaPercent" class="text-secondary font-semibold">0.05% Used</span>
+                </div>
+                <div class="w-full bg-surface-highest h-2 rounded-full overflow-hidden flex">
+                  <div id="quotaBarSnippets" class="bg-primary h-full" style="width: 2%;"></div>
+                  <div id="quotaBarHistory" class="bg-cyan-400 h-full" style="width: 1%;"></div>
+                  <div id="quotaBarSettings" class="bg-amber-400 h-full" style="width: 1%;"></div>
+                </div>
+                <div class="flex items-center justify-between font-mono text-[11px] text-text-muted pt-1">
+                  <span id="prefStoredSummary">0 snippets stored</span>
+                  <span id="prefQuotaSummary">0 KB / 5 MB limit</span>
+                </div>
+              </div>
+
+              <!-- Export & Import Controls -->
+              <div class="space-y-2 font-mono text-[12px]">
+                <button onclick="exportDataBackup()" class="w-full flex items-center justify-between p-3 bg-surface-low hover:bg-surface-container rounded-xl border border-border-subtle transition-all group" type="button">
+                  <div class="flex items-center gap-2.5">
+                    <span class="material-symbols-outlined text-primary text-[20px]">download</span>
+                    <div class="text-left">
+                      <span class="text-text-primary block font-medium">Export Full JSON Backup</span>
+                      <span class="text-text-muted text-[11px]">clippie_backup.json</span>
+                    </div>
+                  </div>
+                  <span class="material-symbols-outlined text-text-muted text-[18px] group-hover:translate-x-0.5 transition-transform">arrow_forward</span>
+                </button>
+
+                <!-- Dropzone Restore -->
+                <div id="backupDropzone" class="p-4 rounded-xl border-2 border-dashed border-border-subtle hover:border-primary/50 bg-surface-lowest flex flex-col items-center justify-center text-center cursor-pointer transition-colors" onclick="document.getElementById('prefImportFileInput').click()">
+                  <input type="file" id="prefImportFileInput" accept=".json" class="hidden">
+                  <span class="material-symbols-outlined text-text-muted text-[24px] mb-1">upload_file</span>
+                  <span class="font-medium text-text-primary text-[12px]">Drop JSON backup to restore</span>
+                  <span class="text-text-muted text-[11px]">Supports v1.x and v2.0 snapshots seamlessly</span>
+                </div>
+
+                <!-- Reset Cache Trigger -->
+                <div class="pt-2">
+                  <div class="p-3 bg-surface-low rounded-xl border border-red-500/20 flex items-center justify-between">
+                    <div>
+                      <span class="font-medium text-red-400 block text-[12px]">Purge Cache & Reset</span>
+                      <span class="text-text-muted text-[11px]">Wipes local cache and re-seeds default samples</span>
+                    </div>
+                    <button onclick="openResetConfirmModal()" class="px-3 py-1 rounded bg-red-500/20 hover:bg-red-500 text-red-300 hover:text-white text-[11px] font-semibold transition-colors" type="button">Reset</button>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- Keyboard Shortcuts Table -->
+            <section class="bg-surface-card rounded-xl p-5 border border-border-subtle shadow-sm space-y-3 font-mono text-[12px]">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span class="material-symbols-outlined text-primary text-[20px]">keyboard</span>
+                  <h2 class="text-[16px] font-semibold text-text-primary">Shortcuts Cheatsheet</h2>
+                </div>
+                <span class="text-text-muted text-[11px]">Keyboard-First</span>
+              </div>
+              <div class="bg-surface-low rounded-lg divide-y divide-border-subtle border border-border-subtle overflow-hidden">
+                <div class="flex items-center justify-between p-2.5">
+                  <span class="text-text-secondary">Global Search</span>
+                  <div class="flex gap-1"><kbd class="px-1.5 py-0.5 rounded bg-surface-card border border-border-subtle text-text-primary text-[10px]">⌘</kbd><kbd class="px-1.5 py-0.5 rounded bg-surface-card border border-border-subtle text-text-primary text-[10px]">K</kbd></div>
+                </div>
+                <div class="flex items-center justify-between p-2.5">
+                  <span class="text-text-secondary">New Code Snippet</span>
+                  <kbd class="px-2 py-0.5 rounded bg-surface-card border border-border-subtle text-text-primary text-[10px]">N</kbd>
+                </div>
+                <div class="flex items-center justify-between p-2.5">
+                  <span class="text-text-secondary">Commit Snippet</span>
+                  <div class="flex gap-1"><kbd class="px-1.5 py-0.5 rounded bg-surface-card border border-border-subtle text-text-primary text-[10px]">⌘</kbd><kbd class="px-1.5 py-0.5 rounded bg-surface-card border border-border-subtle text-text-primary text-[10px]">↵</kbd></div>
+                </div>
+                <div class="flex items-center justify-between p-2.5">
+                  <span class="text-text-secondary">Close Modal / Dismiss</span>
+                  <kbd class="px-2 py-0.5 rounded bg-surface-card border border-border-subtle text-text-primary text-[10px]">Esc</kbd>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Mobile Sticky Bottom Action Bar (< 1024px) -->
+    <div class="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-surface-lowest/95 backdrop-blur-xl border-t border-border-subtle px-4 py-2.5 flex items-center justify-around pb-safe">
+      <button onclick="switchView('all-snippets')" class="flex flex-col items-center gap-0.5 text-text-muted hover:text-text-primary transition-colors active:scale-95" type="button">
+        <span class="material-symbols-outlined text-[20px]">code_blocks</span>
+        <span class="font-mono text-[10px]">All</span>
+      </button>
+
+      <button onclick="switchView('starred-vault')" class="flex flex-col items-center gap-0.5 text-text-muted hover:text-amber-400 transition-colors active:scale-95" type="button">
+        <span class="material-symbols-outlined text-[20px]">star</span>
+        <span class="font-mono text-[10px]">Vault</span>
+      </button>
+
+      <!-- Center FAB + New Snippet Trigger -->
+      <button onclick="openModal()" class="w-12 h-12 -mt-5 rounded-full bg-primary text-white shadow-lg shadow-blue-500/40 flex items-center justify-center active:scale-90 transition-transform" type="button" aria-label="Add Snippet">
+        <span class="material-symbols-outlined text-[24px]">add</span>
+      </button>
+
+      <button onclick="switchView('clipboard-history')" class="flex flex-col items-center gap-0.5 text-text-muted hover:text-cyan-400 transition-colors active:scale-95" type="button">
+        <span class="material-symbols-outlined text-[20px]">history</span>
+        <span class="font-mono text-[10px]">Clips</span>
+      </button>
+
+      <button onclick="switchView('settings')" class="flex flex-col items-center gap-0.5 text-text-muted hover:text-text-primary transition-colors active:scale-95" type="button">
+        <span class="material-symbols-outlined text-[20px]">tune</span>
+        <span class="font-mono text-[10px]">Config</span>
+      </button>
+    </div>
+
+  </div>
+
+  <!-- =========================================================================
+       MODAL LAYER: SMART RAPID-CAPTURE / EDIT MODAL
+       Direct replica of Stitch Screen: d2f2320b3dd84c118a955ad8a6a76e0b
+       ========================================================================= -->
+  <div id="captureModalOverlay" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md hidden transition-opacity duration-200">
+    <div class="relative w-full max-w-3xl bg-[#050507] rounded-xl border border-border-subtle shadow-[0_32px_80px_rgba(0,0,0,0.95)] flex flex-col overflow-hidden text-text-primary max-h-[90vh]">
+      
+      <!-- Top Hairline Accent -->
+      <div class="h-[2px] w-full bg-[#111115] flex">
+        <div class="h-full w-28 bg-primary"></div>
+        <div class="h-full w-12 bg-secondary"></div>
+      </div>
+
+      <!-- Modal Header -->
+      <div class="px-5 pt-4 pb-3 border-b border-border-subtle flex flex-col gap-2.5">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="flex items-center gap-1.5 font-mono text-[12px]">
+              <span class="text-primary font-semibold uppercase">[cli::capture]</span>
+              <span class="text-syntax-comment">/</span>
+              <span id="modalModeTitle" class="font-medium text-text-primary">Quick Stash</span>
+            </div>
+            <!-- Dynamic AST Heuristic Badge -->
+            <div id="modalAstBadge" class="flex items-center gap-1.5 px-2 py-0.5 rounded border border-border-subtle bg-surface-low font-mono text-[11px] text-secondary">
+              <span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+              <span id="modalAstConfidenceText">python • 99.4% AST confident</span>
+            </div>
+          </div>
+          <!-- Close Modal -->
+          <button onclick="closeModal()" class="px-2 py-1 rounded border border-border-subtle hover:border-border-hover bg-surface-low text-text-muted hover:text-text-primary transition-colors flex items-center gap-1 font-mono text-[11px]" type="button">
+            <span class="material-symbols-outlined text-[14px]">close</span>
+            <span>esc</span>
+          </button>
+        </div>
+
+        <!-- Mode Switcher: Code vs Markdown Memo -->
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-1 p-0.5 bg-surface-lowest border border-border-subtle rounded-lg">
+            <button id="modalTabCode" class="px-3 py-1 rounded font-mono text-[11px] font-medium bg-surface-card text-text-primary border border-border-subtle transition-all flex items-center gap-1.5" onclick="setModalMode('code')" type="button">
+              <span class="material-symbols-outlined text-[13px] text-primary">code</span>
+              <span>Code Snippet</span>
+            </button>
+            <button id="modalTabMemo" class="px-3 py-1 rounded font-mono text-[11px] font-normal text-text-muted hover:text-text-secondary transition-all flex items-center gap-1.5" onclick="setModalMode('memo')" type="button">
+              <span class="material-symbols-outlined text-[13px]">notes</span>
+              <span>// Thought Log (Markdown)</span>
+            </button>
+          </div>
+          <div class="font-mono text-[11px] text-syntax-comment flex items-center gap-1.5">
+            <span class="w-1.5 h-1.5 rounded-full bg-syntax-comment"></span>
+            <span>synced buffer</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Editor Body & Inputs -->
+      <div class="px-5 py-3 flex flex-col gap-3 overflow-y-auto">
+        <!-- Title Bar with Regenerate Button -->
+        <div class="flex items-center gap-2 bg-surface-low px-3 py-1.5 rounded-lg border border-border-subtle font-mono text-[12px]">
+          <span class="text-primary uppercase tracking-wider shrink-0 text-[11px]">title :</span>
+          <input id="modalTitleInput" type="text" placeholder="Title (leave blank for smart heuristic inference)..." class="flex-1 bg-transparent text-text-primary focus:outline-none placeholder:text-syntax-comment">
+          <button onclick="regenerateSmartTitle()" class="interactive-btn px-2 py-0.5 hover:bg-surface-container text-text-muted hover:text-primary rounded border border-transparent hover:border-border-subtle transition-all flex items-center gap-1 text-[11px]" type="button" title="Regenerate title from code content">
+            <span class="material-symbols-outlined text-[13px]">refresh</span>
+            <span>auto-title</span>
+          </button>
+        </div>
+
+        <!-- Code Editor Surface -->
+        <div class="border border-border-subtle bg-[#050507] rounded-lg flex flex-col">
+          <!-- Editor Sub-bar -->
+          <div class="h-8 px-3 bg-surface-low border-b border-border-subtle flex items-center justify-between font-mono text-[11px]">
+            <div class="flex items-center gap-3 text-text-muted">
+              <div class="flex items-center gap-1 text-syntax-keyword">
+                <span class="material-symbols-outlined text-[13px]">terminal</span>
+                <span id="modalFilenameLabel">main.py</span>
+              </div>
+              <span>•</span>
+              <select id="modalLanguageSelect" class="bg-transparent border-none text-text-secondary focus:outline-none cursor-pointer">
+                <option value="auto">Auto-Detect</option>
+                <option value="bash">Bash / Shell</option>
+                <option value="python">Python</option>
+                <option value="json">JSON</option>
+                <option value="yaml">YAML</option>
+                <option value="sql">SQL</option>
+                <option value="markdown">Markdown</option>
+                <option value="rust">Rust</option>
+                <option value="typescript">TypeScript / JS</option>
+                <option value="docker">Dockerfile</option>
+                <option value="plaintext">Plain Text</option>
+              </select>
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="toggleModalSoftWrap()" id="modalWrapToggleBtn" class="px-2 py-0.5 rounded border border-border-subtle bg-surface-card text-text-secondary hover:text-text-primary transition-colors text-[11px]" type="button">
+                wrap: on
+              </button>
+              <button onclick="formatCodeInModal()" class="px-2 py-0.5 rounded border border-border-subtle bg-surface-card text-syntax-func hover:text-white transition-colors text-[11px]" type="button">
+                format
+              </button>
+            </div>
+          </div>
+
+          <!-- The Textarea Code Buffer -->
+          <div class="flex p-3 font-mono text-[12px] min-h-[200px] max-h-[360px] overflow-hidden">
+            <!-- Line numbers display -->
+            <div id="modalLineGutter" class="select-none text-right pr-3 text-syntax-comment font-mono text-[11px] opacity-40 border-r border-border-subtle mr-3 shrink-0 flex flex-col leading-6">
+              <span>01</span>
+            </div>
+            <!-- Actual Textarea -->
+            <textarea id="modalCodeTextarea" rows="8" placeholder="# Paste or type code here... AST engine will auto-detect language." class="flex-1 bg-transparent text-text-primary focus:outline-none resize-none font-mono text-[12px] leading-6 placeholder:text-syntax-comment"></textarea>
+          </div>
+
+          <!-- Thought Scratchpad Bar -->
+          <div class="border-t border-border-subtle bg-surface-lowest px-3 py-1.5 flex items-center justify-between font-mono text-[11px]">
+            <div class="flex items-center gap-2 text-syntax-comment">
+              <span class="text-syntax-keyword">//</span>
+              <input id="modalThoughtInput" type="text" placeholder="thought log / memo: e.g. signature valid · PyJWT decoded with HMAC HS256" class="bg-transparent border-none text-text-muted focus:outline-none placeholder:text-syntax-comment/60 w-full italic">
+            </div>
+            <span id="modalCharCounter" class="text-text-muted shrink-0 pl-2">0 lines • 0 chars</span>
+          </div>
+        </div>
+
+        <!-- Tags & Star Pinned Tray -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-mono text-[11px]">
+          <!-- Tag Manager -->
+          <div class="flex items-center gap-1.5 flex-wrap" id="modalTagManager">
+            <span class="text-text-muted uppercase tracking-wider mr-1">tags :</span>
+            <div id="modalTagsList" class="flex items-center gap-1.5 flex-wrap">
+              <!-- Tag Pills will be injected here -->
+            </div>
+            <div class="flex items-center gap-1 px-2 py-0.5 rounded border border-border-subtle bg-surface-low text-text-muted focus-within:border-primary transition-colors">
+              <span>#</span>
+              <input id="modalAddTagInput" type="text" placeholder="add tag..." class="bg-transparent w-20 focus:w-28 focus:outline-none text-text-primary placeholder:text-text-muted">
+            </div>
+          </div>
+
+          <!-- Star Checkbox -->
+          <div class="flex items-center gap-4 shrink-0">
+            <label class="flex items-center gap-1.5 cursor-pointer select-none text-text-secondary hover:text-text-primary transition-colors">
+              <input id="modalStarCheckbox" type="checkbox" class="accent-amber-400 rounded">
+              <span class="flex items-center gap-1 text-amber-400">
+                <span class="material-symbols-outlined text-[14px]">star</span>
+                <span>Pin to Vault</span>
+              </span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="px-5 py-3 bg-[#040406] border-t border-border-subtle flex items-center justify-between font-mono text-[11px]">
+        <div class="hidden sm:flex items-center gap-3 text-text-muted">
+          <span>shortcuts:</span>
+          <div class="flex items-center gap-1">
+            <kbd class="px-1 py-0.2 rounded bg-surface-low border border-border-subtle text-[10px]">tab</kbd>
+            <span>indent</span>
+          </div>
+          <span>•</span>
+          <div class="flex items-center gap-1">
+            <kbd class="px-1 py-0.2 rounded bg-surface-low border border-border-subtle text-[10px]">esc</kbd>
+            <span>dismiss</span>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 ml-auto">
+          <button onclick="closeModal()" class="px-3 py-1.5 rounded border border-border-subtle bg-surface-low hover:bg-surface-card text-text-secondary hover:text-text-primary transition-colors" type="button">
+            cancel
+          </button>
+          <button id="modalCommitBtn" onclick="commitSnippetFromModal()" class="interactive-btn px-4 py-1.5 rounded bg-primary text-white hover:bg-blue-600 font-semibold flex items-center gap-1.5 active:scale-95 transition-all shadow-md shadow-blue-500/20" type="button">
+            <span class="material-symbols-outlined text-[15px]">check</span>
+            <span id="modalCommitBtnText">commit_snippet</span>
+            <kbd class="px-1 py-0.2 rounded bg-white/20 text-[9px]">⌘↵</kbd>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       KEYBOARD SHORTCUTS REFERENCE MODAL
+       ========================================================================= -->
+  <div id="shortcutsModalOverlay" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md hidden">
+    <div class="w-full max-w-lg bg-surface-card rounded-xl border border-border-subtle p-5 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-border-subtle pb-3">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary">keyboard</span>
+          <h3 class="font-semibold text-text-primary text-[16px]">Keyboard Shortcuts</h3>
+        </div>
+        <button onclick="closeShortcutsModal()" class="text-text-muted hover:text-text-primary p-1">
+          <span class="material-symbols-outlined text-[18px]">close</span>
+        </button>
+      </div>
+      <div class="space-y-2 font-mono text-[12px]">
+        <div class="flex justify-between py-1.5 border-b border-border-subtle">
+          <span class="text-text-secondary">Focus Search Bar</span>
+          <span class="flex gap-1"><kbd class="px-1.5 py-0.5 rounded bg-surface-low border border-border-subtle">⌘K</kbd> or <kbd class="px-1.5 py-0.5 rounded bg-surface-low border border-border-subtle">/</kbd></span>
+        </div>
+        <div class="flex justify-between py-1.5 border-b border-border-subtle">
+          <span class="text-text-secondary">New Snippet Capture</span>
+          <kbd class="px-2 py-0.5 rounded bg-surface-low border border-border-subtle">N</kbd>
+        </div>
+        <div class="flex justify-between py-1.5 border-b border-border-subtle">
+          <span class="text-text-secondary">Save / Commit Snippet</span>
+          <span class="flex gap-1"><kbd class="px-1.5 py-0.5 rounded bg-surface-low border border-border-subtle">⌘</kbd><kbd class="px-1.5 py-0.5 rounded bg-surface-low border border-border-subtle">↵</kbd></span>
+        </div>
+        <div class="flex justify-between py-1.5 border-b border-border-subtle">
+          <span class="text-text-secondary">Dismiss Modal / Clear Search</span>
+          <kbd class="px-2 py-0.5 rounded bg-surface-low border border-border-subtle">Esc</kbd>
+        </div>
+        <div class="flex justify-between py-1.5 border-b border-border-subtle">
+          <span class="text-text-secondary">Quick Trigger Gist Sync</span>
+          <span class="flex gap-1"><kbd class="px-1.5 py-0.5 rounded bg-surface-low border border-border-subtle">⌘</kbd><kbd class="px-1.5 py-0.5 rounded bg-surface-low border border-border-subtle">S</kbd></span>
+        </div>
+        <div class="flex justify-between py-1.5">
+          <span class="text-text-secondary">Quick-Copy Pinned Vault Item</span>
+          <span class="flex gap-1"><kbd class="px-1.5 py-0.5 rounded bg-surface-low border border-border-subtle">⌥</kbd><kbd class="px-1.5 py-0.5 rounded bg-surface-low border border-border-subtle">1..9</kbd></span>
+        </div>
+      </div>
+      <div class="pt-2 text-right">
+        <button onclick="closeShortcutsModal()" class="px-3 py-1.5 rounded bg-surface-container hover:bg-surface-high font-mono text-[12px] text-text-primary">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       RESET CACHE CONFIRMATION MODAL
+       ========================================================================= -->
+  <div id="resetConfirmModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md hidden">
+    <div class="w-full max-w-md bg-surface-card rounded-xl border border-red-500/30 p-5 shadow-2xl space-y-4">
+      <div class="flex items-center gap-3 text-red-400">
+        <span class="material-symbols-outlined text-[28px]">warning</span>
+        <h3 class="font-semibold text-[16px] text-text-primary">Purge Cache & Reset?</h3>
+      </div>
+      <p class="text-text-secondary text-[13px]">This will reset your snippets to the default pre-seeded engineering vault and reset your preferences. This action cannot be undone.</p>
+      <div class="flex items-center justify-end gap-2 pt-2">
+        <button onclick="closeResetConfirmModal()" class="px-3 py-1.5 rounded border border-border-subtle font-mono text-[12px] text-text-secondary hover:text-text-primary">Cancel</button>
+        <button onclick="executeResetCache()" class="px-3 py-1.5 rounded bg-red-600 hover:bg-red-700 text-white font-mono text-[12px] font-semibold">Purge Everything</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       FLOATING TOAST NOTIFICATION CONTAINER
+       ========================================================================= -->
+  <div id="toastContainer" class="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none max-w-sm w-full"></div>
+
+  <!-- Main JavaScript Engine -->
+  <script src="app.js"></script>
+</body>
+</html>

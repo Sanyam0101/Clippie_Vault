@@ -1,0 +1,139 @@
+================================================================================
+PRODUCT REQUIREMENTS DOCUMENT (PRD)
+PROJECT: CLIPPIE — THE INTELLIGENT POCKET CLIPBOARD & SNIPPET SUITE
+VERSION: 2.0.0-COMPLETE (Production-Ready Architecture)
+================================================================================
+
+1. EXECUTIVE SUMMARY & PRODUCT VISION
+
+1.1 Vision Statement
+Clippie is a hyper-minimalistic, local-first web utility designed to eradicate context-switching friction for developers, system administrators, and digital power users. It acts as an instant "pocket clipboard" and structured workspace for terminal commands, configuration snippets, markdown blocks, and code templates.
+
+1.2 Core Value Proposition
+- Zero Friction: Local-first architecture powered by browser `localStorage` ensuring sub-50ms response times and complete offline availability.
+- Intelligent Automation: Front-end heuristic code type detection and auto-generated smart titles.
+- Immersive Styling: Multi-IDE visual profiles replicating native development environments (VS Code, Monokai, GitHub).
+- Ergonomic Adaptability: Seamlessly transitions between desktop masonry power-grids and single-column mobile touch interfaces.
+
+---
+
+2. TARGET USER PERSONAS & EMPATHY MAPPING
+
+2.1 Persona A: The Full-Stack Developer ("Alex")
+- Context: Rapidly switching between terminal commands, Git rebase sequences, Docker Compose files, and API authentication headers.
+- Pain Point: Digging through unstructured scratchpads or browser history kills flow state.
+- Goal: Instant copy-paste access with visual confirmation and clean syntactic formatting.
+
+2.2 Persona B: The DevOps Engineer ("Sam")
+- Context: Managing Kubernetes manifests, Terraform blocks, and environment variable templates (`.env`).
+- Pain Point: Misaligned indentation or broken formatting when copying configuration files.
+- Goal: Reliable code block rendering with soft-wrap toggles, line numbering, and instant type filtering.
+
+---
+
+3. USER EXPERIENCE (UX) & USER INTERFACE (UI) DESIGN SYSTEM
+
+3.1 Minimalistic Design Philosophy
+- Aesthetic: Modern developer-tool minimalist inspired by Vercel, Linear, and Raycast. Features high-contrast typography, crisp borders, subtle shadows, and intentional whitespace.
+- Color Tokens:
+  - Dark Theme Base: `#09090b` (Zinc 950) background, `#18181b` (Zinc 900) card surfaces, `#27272a` borders.
+  - Light Theme Base: `#ffffff` background, `#f4f4f5` card surfaces, `#e4e4e7` borders.
+  - Accent / Action: `#3b82f6` (Blue 500) primary action; `#10b981` (Emerald 500) success indicator.
+  - Typography: Monospace font family (`JetBrains Mono`, `Fira Code`, `Consolas`) for code blocks; Inter for UI control labels.
+
+3.2 Desktop Format (Width >= 1024px)
+- Layout: 3-column or 4-column responsive CSS Grid masonry layout.
+- Navigation: Sticky top navigation bar housing the Global Search Bar, Theme Switcher, Import/Export tools, and the primary "New Snippet" action trigger.
+- Micro-Interactions: Hover-reveal action buttons (Edit, Delete, Copy) to keep cards visually clean when unselected.
+
+3.3 Mobile Phone Format (Width < 1024px)
+- Layout: Single-column vertical stack optimized for thumb-zone ergonomics.
+- Navigation: Sticky bottom action bar featuring a prominent Floating Action Button (FAB) for instant snippet capture anywhere on the page, alongside a quick-search trigger.
+- Touch Targets: Minimum interactive touch target size of 44x44px for all buttons and toggles.
+
+---
+
+4. CORE FEATURE SPECIFICATIONS
+
+4.1 Title & Labels Management
+- Every snippet card contains a user-definable or auto-generated Title.
+- Tag Matrix: Users can assign custom color-coded tag pills (e.g., `#devops`, `#auth`, `#ai-prompts`, `#frontend`) to categorize snippets for targeted filtering.
+
+4.2 Cards Style & States
+- Card Anatomy:
+  - Header: Title, detected language badge, and inline action icons (Edit, Delete).
+  - Body: Code block container with horizontal/vertical scrolling or soft-wrap capability.
+  - Footer: Timestamp, assigned tags pills, and a prominent Copy action trigger.
+- Card Display Variants:
+  - Collapsed Mode: Displays only the title and language badge for dense, high-level overviews.
+  - Expanded Mode: Fully reveals multiline code contents and full markdown formatting.
+
+4.3 Clipboard & Toast Notification Subsystem
+- One-Click Copy: Direct integration with the modern Async Clipboard API (`navigator.clipboard.writeText`). Includes a secure fallback implementation (`document.execCommand('copy')`).
+- Visual Feedback & Notifications:
+  - When copied, the button smoothly shifts its state to display a checkmark icon with the text "Copied! ✨" for 1500ms alongside a subtle CSS scale transition.
+  - Toast Notification Engine: Non-blocking floating notifications anchored to the top-right viewport corner providing real-time feedback for operations:
+    - Success: *"Snippet copied to clipboard successfully 📋"*
+    - Creation: *"New snippet captured and saved ✨"*
+    - Export/Import: *"Configuration backup exported successfully"*
+
+4.4 Filter & Search Matrix
+- Global Fuzzy Search Bar: Instantly filters stored cards in real-time by querying titles, raw code contents, and associated tags concurrently ($\Delta t = 150\text{ms}$ debounce).
+- Dynamic Pill Filters: Clickable filter chips at the top of the interface (`All`, `Bash`, `Python`, `JSON`, `YAML`, `Markdown`, `SQL`) to isolate snippet categories instantly.
+
+4.5 Front-End Code Type Detection Engine
+- Automated Scanner: Upon text input or paste, a lightweight heuristic regex engine analyzes token patterns to auto-detect snippet syntax:
+  - Matches `SELECT`, `INSERT`, `FROM` $\rightarrow$ `SQL`
+  - Matches `npm install`, `docker`, `git` $\rightarrow$ `Bash / Shell`
+  - Matches `{` and `"` structure $\rightarrow$ `JSON`
+  - Matches `def `, `import `, `print(` $\rightarrow$ `Python`
+  - Matches `version:`, `services:` $\rightarrow$ `YAML`
+
+4.6 AI & Smart Title Generation
+- If a user inputs text and leaves the Title field blank, the AI/Heuristic title generator extracts the first non-linear comment or the first significant line of code (e.g., detecting `FROM node:18-alpine` automatically assigns the title *"Docker Node Base"*).
+
+4.7 Different Style Code Blocks & IDE Themes
+- Users can toggle rendering profiles to match their favorite development environments:
+  - VS Code Dark+: Classic dark theme with vivid syntax token colors.
+  - Monokai Pro: High-contrast neon highlights and dark charcoal backgrounds.
+  - GitHub Clean: Neutral light/dark developer aesthetic.
+- Advanced Code Block Controls: Toggles for Line Numbers, Soft-Wrap (preventing horizontal overflow), and Syntax Token Highlighting.
+
+---
+
+5. TECHNICAL ARCHITECTURE & DATA LAYER
+
+5.1 Technology Stack
+- Frontend: Single-file Vanilla JavaScript (ES6+) or lightweight React framework with Tailwind CSS via CDN for rapid utility styling and zero compilation overhead.
+- Zero Backend: Operates entirely client-side for maximum privacy and lightning speed.
+
+5.2 Data Persistence & Storage Schema
+- Primary Persistence: Browser `localStorage` key `clippie_snippets_v2`.
+- Data Schema Structure:
+  ```json
+  {
+    "id": "clip_17123456789",
+    "title": "Docker Compose Up Command",
+    "language": "yaml",
+    "content": "version: '3.8'\nservices:\n  app:\n    build: .",
+    "tags": ["devops", "docker"],
+    "createdAt": "2026-09-18T11:15:00Z"
+  }
+  ```
+- Backup & Restore: Built-in JSON export and import handlers allowing users to download their snippet repository as a backup file and restore it on new machines.
+
+---
+
+6. PERFORMANCE & NON-FUNCTIONAL REQUIREMENTS
+- Load Performance: Initial First Contentful Paint (FCP) under 100ms.
+- Responsiveness: UI layout recalculations and real-time filtering must execute in under 16ms (maintaining 60 FPS).
+- Security: Client-side sanitization of user-injected text to prevent DOM-based XSS when rendering raw code or markdown strings.
+- Offline Capability: Fully operational offline without network requests.
+
+---
+
+7. IMPLEMENTATION ROADMAP (2-HOUR MVP TO SCALE)
+- Phase 1 (Minutes 0–30): Single-file HTML/Tailwind skeleton, responsive grid layout, and basic CRUD state using `localStorage`.
+- Phase 2 (Minutes 30–75): Clipboard API integration, toast notification engine, search bar, and dynamic category filters.
+- Phase 3 (Minutes 75–120): Heuristic code type detection, smart title inference, IDE theme switcher profiles, and final polish.
+================================================================================
